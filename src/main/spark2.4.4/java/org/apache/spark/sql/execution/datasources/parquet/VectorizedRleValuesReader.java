@@ -52,6 +52,11 @@ public class VectorizedRleValuesReader extends ValuesReader
     PACKED
   }
 
+  // todo: implement
+  public void initFromPage(int var1, ByteBuffer var2, int var3) throws IOException {
+    ;
+  }
+
   // Encoded data.
   private ByteBufferInputStream in;
 
