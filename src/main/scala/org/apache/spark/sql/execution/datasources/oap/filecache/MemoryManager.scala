@@ -28,8 +28,14 @@ import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.utils.PersistentMemoryConfigUtils
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.storage.{BlockManager, TestBlockId}
-import org.apache.spark.unsafe.{PersistentMemoryPlatform, Platform}
+import org.apache.spark.unsafe.{PersistentMemoryPlatform, Platform, VMEMCacheJNI}
 import org.apache.spark.util.Utils
+
+
+object CacheEnum extends Enumeration {
+  type CacheEnum = Value
+  val INDEX, DATA, GENERAL = Value
+}
 
 /**
  * A memory block holder which contains the base object, offset, length and occupiedSize. For DRAM
@@ -41,10 +47,12 @@ import org.apache.spark.util.Utils
  * @param occupiedSize the actual occupied size of the memory block
  */
 case class MemoryBlockHolder(
+    var cacheType: CacheEnum.CacheEnum,
     baseObject: AnyRef,
     baseOffset: Long,
     length: Long,
-    occupiedSize: Long)
+    occupiedSize: Long,
+    source: String)
 
 private[sql] abstract class MemoryManager {
   /**
@@ -95,6 +103,8 @@ private[sql] object MemoryManager {
     memoryManagerOpt match {
       case "offheap" => new OffHeapMemoryManager(sparkEnv)
       case "pm" => new PersistentMemoryManager(sparkEnv)
+      case "hybrid" => new HybridMemoryManager(sparkEnv)
+      case "self" => new SelfManagedMemoryManager(sparkEnv)
       case _ => throw new UnsupportedOperationException(
         s"The memory manager: ${memoryManagerOpt} is not supported now")
     }
@@ -144,7 +154,7 @@ private[filecache] class OffHeapMemoryManager(sparkEnv: SparkEnv)
     logDebug(s"request allocate $size memory, actual occupied size: " +
       s"${size}, used: $memoryUsed")
     // For OFF_HEAP, occupied size also equal to the size.
-    MemoryBlockHolder(null, address, size, size)
+    MemoryBlockHolder(CacheEnum.GENERAL, null, address, size, size, "DRAM")
   }
 
   override private[filecache] def free(block: MemoryBlockHolder): Unit = {
@@ -156,6 +166,50 @@ private[filecache] class OffHeapMemoryManager(sparkEnv: SparkEnv)
 
   override def stop(): Unit = {
     memoryManager.releaseStorageMemory(oapMemory, MemoryMode.OFF_HEAP)
+  }
+}
+
+/**
+ * An memory manager which support allocate OFF_HEAP memory. It will not acquire memory from
+ * spark storage memory, and cacheGuardian is consumer of this class.
+ */
+private[filecache] class SelfManagedMemoryManager(sparkEnv: SparkEnv)
+  extends MemoryManager with Logging {
+
+  val cacheGuardianMemorySizeStr =
+    sparkEnv.conf.get(OapConf.OAP_CACHE_GUARDIAN_MEMORY_SIZE)
+  val cacheGuardianMemory = Utils.byteStringAsBytes(cacheGuardianMemorySizeStr)
+  logInfo(s"cacheGuardian total use $cacheGuardianMemory bytes memory")
+
+  private val _memoryUsed = new AtomicLong(0)
+  override def memoryUsed: Long = _memoryUsed.get()
+  override def memorySize: Long = cacheGuardianMemory
+
+  override private[filecache] def allocate(size: Long): MemoryBlockHolder = {
+    if (memoryUsed + size > cacheGuardianMemory) {
+      throw new OapException("cache guardian use too much memory")
+    }
+    val startTime = System.currentTimeMillis()
+    val occupiedSize = size
+    val address = Platform.allocateMemory(occupiedSize)
+    _memoryUsed.getAndAdd(occupiedSize)
+    logDebug(s"memory manager allocate takes" +
+      s" ${System.currentTimeMillis() - startTime} ms, " +
+      s"request allocate $size memory, actual occupied size: " +
+      s"${occupiedSize}, used: $memoryUsed")
+
+    MemoryBlockHolder(CacheEnum.GENERAL, null, address, size,
+      occupiedSize, "DRAM")
+  }
+
+  override private[filecache] def free(block: MemoryBlockHolder): Unit = {
+    val startTime = System.currentTimeMillis()
+    assert(block.baseObject == null)
+    Platform.freeMemory(block.baseOffset )
+    _memoryUsed.getAndAdd(-block.occupiedSize)
+    logDebug(s"memory manager free takes" +
+      s" ${System.currentTimeMillis() - startTime} ms" +
+      s"freed ${block.occupiedSize} memory, used: $memoryUsed")
   }
 }
 
@@ -219,11 +273,11 @@ private[filecache] class PersistentMemoryManager(sparkEnv: SparkEnv)
       _memoryUsed.getAndAdd(occupiedSize)
       logDebug(s"request allocate $size memory, actual occupied size: " +
         s"${occupiedSize}, used: $memoryUsed")
-      MemoryBlockHolder(null, address, size, occupiedSize)
+      MemoryBlockHolder(CacheEnum.GENERAL, null, address, size, occupiedSize, "PM")
     } catch {
       case e: OutOfMemoryError =>
         logWarning(e.getMessage)
-        MemoryBlockHolder(null, 0L, 0L, 0L)
+        MemoryBlockHolder(CacheEnum.GENERAL, null, 0L, 0L, 0L, "PM")
     }
   }
 
@@ -235,4 +289,85 @@ private[filecache] class PersistentMemoryManager(sparkEnv: SparkEnv)
   }
 
   override def isDcpmmUsed(): Boolean = {true}
+}
+
+private[filecache] class HybridMemoryManager(sparkEnv: SparkEnv)
+  extends MemoryManager with Logging {
+  private val (persistentMemoryManager, dramMemoryManager) =
+    (new PersistentMemoryManager(sparkEnv), new SelfManagedMemoryManager(sparkEnv))
+
+  private val _memoryUsed = new AtomicLong(0)
+
+  private var memBlockInPM = scala.collection.mutable.Set[MemoryBlockHolder]()
+
+  private val (_dataDRAMCacheSize, _dataPMCacheSize, _dramGuardianSize, _pmGuardianSize) = init()
+
+  private def init(): (Long, Long, Long, Long) = {
+    val conf = sparkEnv.conf
+    // The NUMA id should be set when the executor process start up. However, Spark don't
+    // support NUMA binding currently.
+    var numaId = conf.getInt("spark.executor.numa.id", -1)
+    val executorId = sparkEnv.executorId.toInt
+    val map = PersistentMemoryConfigUtils.parseConfig(conf)
+    if (numaId == -1) {
+      logWarning(s"Executor ${executorId} is not bind with NUMA. It would be better to bind " +
+        s"executor with NUMA when cache data to Intel Optane DC persistent memory.")
+      // Just round the executorId to the total NUMA number.
+      // TODO: improve here
+      numaId = executorId % PersistentMemoryConfigUtils.totalNumaNode(conf)
+    }
+
+    val initialPath = map.get(numaId).get
+    val initialSizeStr = conf.get(OapConf.OAP_FIBERCACHE_PERSISTENT_MEMORY_INITIAL_SIZE).trim
+    val initialPMSize = Utils.byteStringAsBytes(initialSizeStr)
+    val reservedSizeStr = conf.get(OapConf.OAP_FIBERCACHE_PERSISTENT_MEMORY_RESERVED_SIZE).trim
+    val reservedPMSize = Utils.byteStringAsBytes(reservedSizeStr)
+    val fullPath = Utils.createTempDir(initialPath + File.separator + executorId)
+    val enableConservative = conf.getBoolean(OapConf.OAP_ENABLE_MEMKIND_CONSERVATIVE.key,
+      OapConf.OAP_ENABLE_MEMKIND_CONSERVATIVE.defaultValue.get)
+    val memkindPattern = if (enableConservative) 1 else 0
+    PersistentMemoryPlatform.initialize(fullPath.getCanonicalPath, initialPMSize, memkindPattern)
+    logInfo(s"Initialize Intel Optane DC persistent memory successfully, numaId: " +
+      s"${numaId}, initial path: ${fullPath.getCanonicalPath}, initial size: " +
+      s"${initialPMSize}, reserved size: ${reservedPMSize}")
+    require(reservedPMSize >= 0 && reservedPMSize < initialPMSize,
+      s"Reserved size(${reservedPMSize}) should be larger than zero and smaller than initial " +
+        s"size(${initialPMSize})")
+    val totalPMUsableSize = initialPMSize - reservedPMSize
+    val initialDRAMSizeSize = Utils.byteStringAsBytes(
+      conf.get(OapConf.OAP_FIBERCACHE_PERSISTENT_MEMORY_INITIAL_SIZE).trim)
+    ((totalPMUsableSize * 0.9).toLong,
+      (totalPMUsableSize * 0.9).toLong,
+      (initialDRAMSizeSize * 0.9).toLong,
+      (initialDRAMSizeSize * 0.1).toLong)
+  }
+
+  private val _memorySize = _dataPMCacheSize
+
+  override def memorySize: Long = _memorySize
+
+  override def memoryUsed: Long = _memoryUsed.get()
+
+  override private[filecache] def allocate(size: Long) = {
+    try {
+      val memBlock = persistentMemoryManager.allocate(size)
+      _memoryUsed.addAndGet(memBlock.occupiedSize)
+      memBlockInPM += memBlock
+      memBlock
+    } catch {
+      case oom : OutOfMemoryError => dramMemoryManager.allocate(size)
+      case ex : Throwable => throw ex
+    }
+
+  }
+
+  override private[filecache] def free(block: MemoryBlockHolder): Unit = {
+    if (memBlockInPM.contains(block)) {
+      memBlockInPM.remove(block)
+      persistentMemoryManager.free(block)
+      _memoryUsed.addAndGet(-1 * block.occupiedSize)
+    } else {
+      dramMemoryManager.free(block)
+    }
+  }
 }

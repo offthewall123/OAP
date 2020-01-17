@@ -21,8 +21,8 @@ import org.apache.spark.sql.oap.OapRuntime
 
 class TestFiberCache(fiberCache: FiberCache)
   extends FiberCache(FiberType.DATA, fiberData =
-    MemoryBlockHolder(null, fiberCache.getBaseOffset,
-      fiberCache.size(), fiberCache.getOccupiedSize())) {
+    MemoryBlockHolder(CacheEnum.GENERAL, null, fiberCache.getBaseOffset,
+      fiberCache.size(), fiberCache.getOccupiedSize(), "DRAM")) {
 
   def free(): Unit = {
     if (!disposed) {
