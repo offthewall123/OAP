@@ -47,7 +47,6 @@ object SourceEnum extends Enumeration {
  * @param occupiedSize the actual occupied size of the memory block
  */
 case class MemoryBlockHolder(
-                              // var cacheType: CacheEnum.CacheEnum,
                               baseObject: AnyRef,
                               baseOffset: Long,
                               length: Long,
@@ -348,18 +347,14 @@ private[filecache] class HybridMemoryManager(sparkEnv: SparkEnv)
   override def memoryUsed: Long = _memoryUsed.get()
 
   override private[filecache] def allocate(size: Long) = {
-    try {
-      val memBlock = persistentMemoryManager.allocate(size)
+    var memBlock = persistentMemoryManager.allocate(size)
+    if (memBlock.length == 0) {
+      memBlock = dramMemoryManager.allocate(size)
+    } else {
       _memoryUsed.addAndGet(memBlock.occupiedSize)
       memBlockInPM += memBlock
-      memBlock
-    } catch {
-      case oom: OutOfMemoryError =>
-        logDebug(s"cannot allocate $size memory from pm, request from dram.")
-        dramMemoryManager.allocate(size)
-      case ex: Throwable => throw ex
     }
-
+    memBlock
   }
 
   override private[filecache] def free(block: MemoryBlockHolder): Unit = {
