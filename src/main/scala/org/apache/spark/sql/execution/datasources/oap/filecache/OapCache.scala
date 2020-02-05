@@ -261,8 +261,7 @@ trait OapCache {
 
 }
 
-class NonEvictPMCache(dramSize: Long,
-                      pmSize: Long,
+class NonEvictPMCache(pmSize: Long,
                       cacheGuardianMemory: Long) extends OapCache with Logging {
   // We don't bother the memory use of Simple Cache
   private val cacheGuardian = new MultiThreadCacheGuardian(Int.MaxValue)
@@ -284,7 +283,7 @@ class NonEvictPMCache(dramSize: Long,
       cacheMissCount.getAndAdd(1)
       val fiberCache = cache(fiber)
       fiberCache.occupy()
-      if (fiberCache.fiberData.source.equals("DRAM")) {
+      if (fiberCache.fiberData.source.equals(SourceEnum.DRAM)) {
         cacheGuardian.addRemovalFiber(fiber, fiberCache)
       } else {
         _cacheSize.addAndGet(fiberCache.size())
@@ -299,7 +298,8 @@ class NonEvictPMCache(dramSize: Long,
     if (cacheMap.contains(fiber)) {
       cacheMap.get(fiber)
     } else {
-      throw new RuntimeException("Key not found")
+      // throw new RuntimeException("Key not found")
+      null
     }
   }
 

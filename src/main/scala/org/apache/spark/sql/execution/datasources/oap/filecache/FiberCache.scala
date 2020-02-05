@@ -265,12 +265,12 @@ object FiberCache {
   private[oap] def apply(data: Array[Byte]): FiberCache = {
     val memoryBlockHolder =
       MemoryBlockHolder(
-        CacheEnum.GENERAL,
+        // CacheEnum.GENERAL,
         data,
         Platform.BYTE_ARRAY_OFFSET,
         data.length,
         data.length,
-        "DRAM")
+        SourceEnum.DRAM)
     FiberCache(FiberType.GENERAL, memoryBlockHolder)
   }
 }

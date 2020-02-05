@@ -32,9 +32,9 @@ import org.apache.spark.unsafe.{PersistentMemoryPlatform, Platform, VMEMCacheJNI
 import org.apache.spark.util.Utils
 
 
-object CacheEnum extends Enumeration {
-  type CacheEnum = Value
-  val INDEX, DATA, GENERAL = Value
+object SourceEnum extends Enumeration {
+  type SourceEnum = Value
+  val DRAM, PM = Value
 }
 
 /**
@@ -47,12 +47,12 @@ object CacheEnum extends Enumeration {
  * @param occupiedSize the actual occupied size of the memory block
  */
 case class MemoryBlockHolder(
-    var cacheType: CacheEnum.CacheEnum,
-    baseObject: AnyRef,
-    baseOffset: Long,
-    length: Long,
-    occupiedSize: Long,
-    source: String)
+                              // var cacheType: CacheEnum.CacheEnum,
+                              baseObject: AnyRef,
+                              baseOffset: Long,
+                              length: Long,
+                              occupiedSize: Long,
+                              source: SourceEnum.SourceEnum)
 
 private[sql] abstract class MemoryManager {
   /**
@@ -154,7 +154,7 @@ private[filecache] class OffHeapMemoryManager(sparkEnv: SparkEnv)
     logDebug(s"request allocate $size memory, actual occupied size: " +
       s"${size}, used: $memoryUsed")
     // For OFF_HEAP, occupied size also equal to the size.
-    MemoryBlockHolder(CacheEnum.GENERAL, null, address, size, size, "DRAM")
+    MemoryBlockHolder(null, address, size, size, SourceEnum.DRAM)
   }
 
   override private[filecache] def free(block: MemoryBlockHolder): Unit = {
@@ -198,8 +198,7 @@ private[filecache] class SelfManagedMemoryManager(sparkEnv: SparkEnv)
       s"request allocate $size memory, actual occupied size: " +
       s"${occupiedSize}, used: $memoryUsed")
 
-    MemoryBlockHolder(CacheEnum.GENERAL, null, address, size,
-      occupiedSize, "DRAM")
+    MemoryBlockHolder(null, address, size, occupiedSize, SourceEnum.DRAM)
   }
 
   override private[filecache] def free(block: MemoryBlockHolder): Unit = {
@@ -273,11 +272,11 @@ private[filecache] class PersistentMemoryManager(sparkEnv: SparkEnv)
       _memoryUsed.getAndAdd(occupiedSize)
       logDebug(s"request allocate $size memory, actual occupied size: " +
         s"${occupiedSize}, used: $memoryUsed")
-      MemoryBlockHolder(CacheEnum.GENERAL, null, address, size, occupiedSize, "PM")
+      MemoryBlockHolder(null, address, size, occupiedSize, SourceEnum.PM)
     } catch {
       case e: OutOfMemoryError =>
         logWarning(e.getMessage)
-        MemoryBlockHolder(CacheEnum.GENERAL, null, 0L, 0L, 0L, "PM")
+        MemoryBlockHolder(null, 0L, 0L, 0L, SourceEnum.PM)
     }
   }
 
@@ -355,8 +354,10 @@ private[filecache] class HybridMemoryManager(sparkEnv: SparkEnv)
       memBlockInPM += memBlock
       memBlock
     } catch {
-      case oom : OutOfMemoryError => dramMemoryManager.allocate(size)
-      case ex : Throwable => throw ex
+      case oom: OutOfMemoryError =>
+        logDebug(s"cannot allocate $size memory from pm, request from dram.")
+        dramMemoryManager.allocate(size)
+      case ex: Throwable => throw ex
     }
 
   }
