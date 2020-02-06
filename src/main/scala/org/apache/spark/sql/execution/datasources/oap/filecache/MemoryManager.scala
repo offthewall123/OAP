@@ -300,6 +300,8 @@ private[filecache] class HybridMemoryManager(sparkEnv: SparkEnv)
 
   private val (_dataDRAMCacheSize, _dataPMCacheSize, _dramGuardianSize, _pmGuardianSize) = init()
 
+  var pmFull = false
+
   private def init(): (Long, Long, Long, Long) = {
     val conf = sparkEnv.conf
     // The NUMA id should be set when the executor process start up. However, Spark don't
@@ -347,14 +349,19 @@ private[filecache] class HybridMemoryManager(sparkEnv: SparkEnv)
   override def memoryUsed: Long = _memoryUsed.get()
 
   override private[filecache] def allocate(size: Long) = {
-    var memBlock = persistentMemoryManager.allocate(size)
-    if (memBlock.length == 0) {
-      memBlock = dramMemoryManager.allocate(size)
-    } else {
+    var memBlock: MemoryBlockHolder = null
+    if (!pmFull) {
+      memBlock = persistentMemoryManager.allocate(size)
       _memoryUsed.addAndGet(memBlock.occupiedSize)
       memBlockInPM += memBlock
+      if (memBlock.length == 0) {
+        pmFull = true
+        memBlock = dramMemoryManager.allocate(size)
+      }
+    } else {
+      memBlock = dramMemoryManager.allocate(size)
     }
-    memBlock
+  memBlock
   }
 
   override private[filecache] def free(block: MemoryBlockHolder): Unit = {
