@@ -18,10 +18,9 @@
 package org.apache.spark.sql.execution.datasources.parquet;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.TimeZone;
 
-import org.apache.parquet.bytes.ByteBufferInputStream;
-import org.apache.parquet.bytes.BytesInput;
 import org.apache.parquet.bytes.BytesUtils;
 import org.apache.parquet.column.ColumnDescriptor;
 import org.apache.parquet.column.Encoding;
@@ -263,7 +262,7 @@ public class SkippableVectorizedColumnReader extends VectorizedColumnReader {
    * just modified the assignment of dataColumn.
    */
   @Override
-  protected void initDataReader(Encoding dataEncoding, ByteBufferInputStream in)
+  protected void initDataReader(Encoding dataEncoding, byte[] bytes, int offset)
     throws IOException {
     this.endOfPageValueCount = valuesRead + pageValueCount;
     if (dataEncoding.usesDictionary()) {
@@ -291,7 +290,7 @@ public class SkippableVectorizedColumnReader extends VectorizedColumnReader {
     }
 
     try {
-      dataColumn.initFromPage(pageValueCount, in);
+      dataColumn.initFromPage(pageValueCount, ByteBuffer.wrap(bytes), offset);
       // dataColumnRef reference dataColumn and type is SkippableVectorizedValuesReader
       this.dataColumnRef = (SkippableVectorizedValuesReader)this.dataColumn;
     } catch (IOException e) {
@@ -320,11 +319,12 @@ public class SkippableVectorizedColumnReader extends VectorizedColumnReader {
     this.defColumnRef = (SkippableVectorizedRleValuesReader)this.defColumn;
     dlReader = this.defColumn;
     try {
-      BytesInput bytes = page.getBytes();
-      ByteBufferInputStream in = bytes.toInputStream();
-      rlReader.initFromPage(pageValueCount, in);
-      dlReader.initFromPage(pageValueCount, in);
-      initDataReader(page.getValueEncoding(), in);
+      byte[] bytes = page.getBytes().toByteArray();
+      rlReader.initFromPage(pageValueCount, ByteBuffer.wrap(bytes), 0);
+      int next = rlReader.getNextOffset();
+      dlReader.initFromPage(pageValueCount, ByteBuffer.wrap(bytes), next);
+      next = dlReader.getNextOffset();
+      initDataReader(page.getValueEncoding(), bytes, next);
     } catch (IOException e) {
       throw new IOException("could not read page " + page + " in col " + descriptor, e);
     }
@@ -343,11 +343,11 @@ public class SkippableVectorizedColumnReader extends VectorizedColumnReader {
     // do not read the length from the stream. v2 pages handle dividing the page bytes.
     this.defColumn = new SkippableVectorizedRleValuesReader(bitWidth, false);
     this.defColumn.initFromPage(
-            this.pageValueCount, page.getDefinitionLevels().toInputStream());
+            this.pageValueCount, page.getDefinitionLevels().toByteBuffer(), 0);
     // defColumnRef reference defColumn and type is SkippableVectorizedRleValuesReader
     this.defColumnRef = (SkippableVectorizedRleValuesReader) this.defColumn;
     try {
-      initDataReader(page.getDataEncoding(), page.getData().toInputStream());
+      initDataReader(page.getDataEncoding(), page.getData().toByteArray(), 0);
     } catch (IOException e) {
       throw new IOException("could not read page " + page + " in col " + descriptor, e);
     }

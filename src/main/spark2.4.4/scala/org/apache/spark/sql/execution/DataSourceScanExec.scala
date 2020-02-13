@@ -412,7 +412,7 @@ case class FileSourceScanExec(
     }
 
     val filePartitions = Seq.tabulate(bucketSpec.numBuckets) { bucketId =>
-      FilePartition(bucketId, prunedFilesGroupedToBuckets.getOrElse(bucketId, Array.empty))
+      FilePartition(bucketId, prunedFilesGroupedToBuckets.getOrElse(bucketId, null))
     }
 
     new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
@@ -472,7 +472,7 @@ case class FileSourceScanExec(
         val newPartition =
           FilePartition(
             partitions.size,
-            currentFiles.toArray) // Copy to a new Array.
+            currentFiles.toArray.toSeq) // Copy to a new Array.
         partitions += newPartition
       }
       currentFiles.clear()

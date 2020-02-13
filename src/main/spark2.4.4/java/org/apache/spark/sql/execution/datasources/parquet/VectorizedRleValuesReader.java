@@ -18,7 +18,6 @@
 package org.apache.spark.sql.execution.datasources.parquet;
 
 import org.apache.parquet.Preconditions;
-import org.apache.parquet.bytes.ByteBufferInputStream;
 import org.apache.parquet.bytes.BytesUtils;
 import org.apache.parquet.column.values.ValuesReader;
 import org.apache.parquet.column.values.bitpacking.BytePacker;
@@ -52,13 +51,10 @@ public class VectorizedRleValuesReader extends ValuesReader
     PACKED
   }
 
-  // todo: implement
-  public void initFromPage(int var1, ByteBuffer var2, int var3) throws IOException {
-    ;
-  }
-
   // Encoded data.
-  private ByteBufferInputStream in;
+  private byte[] in;
+  private int end;
+  private int offset;
 
   // bit/byte width of decoded data and utility to batch unpack them.
   private int bitWidth;
@@ -97,19 +93,17 @@ public class VectorizedRleValuesReader extends ValuesReader
   }
 
   @Override
-  public void initFromPage(int valueCount, ByteBufferInputStream in) throws IOException {
-    this.in = in;
+  public void initFromPage(int valueCount, ByteBuffer page, int start) throws IOException {
+    this.offset = start;
+    this.in = new byte[page.remaining()];
     if (fixedWidth) {
-      // initialize for repetition and definition levels
-      if (readLength) {
+      if (bitWidth != 0) {
         int length = readIntLittleEndian();
-        this.in = in.sliceStream(length);
+        this.end = this.offset + length;
       }
     } else {
-      // initialize for values
-      if (in.available() > 0) {
-        init(in.read());
-      }
+      this.end = in.length;
+      if (this.end != this.offset) init(in[this.offset++] & 255);
     }
     if (bitWidth == 0) {
       // 0 bit width, treat this as an RLE run of valueCount number of 0's.
@@ -129,6 +123,11 @@ public class VectorizedRleValuesReader extends ValuesReader
     this.bitWidth = bitWidth;
     this.bytesWidth = BytesUtils.paddedByteCountFromBits(bitWidth);
     this.packer = Packer.LITTLE_ENDIAN.newBytePacker(bitWidth);
+  }
+
+  @Override
+  public int getNextOffset() {
+    return this.end;
   }
 
   @Override
@@ -561,7 +560,7 @@ public class VectorizedRleValuesReader extends ValuesReader
     int shift = 0;
     int b;
     do {
-      b = in.read();
+      b = in[offset++] & 255;
       value |= (b & 0x7F) << shift;
       shift += 7;
     } while ((b & 0x80) != 0);
@@ -572,10 +571,11 @@ public class VectorizedRleValuesReader extends ValuesReader
    * Reads the next 4 byte little endian int.
    */
   private int readIntLittleEndian() throws IOException {
-    int ch4 = in.read();
-    int ch3 = in.read();
-    int ch2 = in.read();
-    int ch1 = in.read();
+    int ch4 = in[offset] & 255;
+    int ch3 = in[offset + 1] & 255;
+    int ch2 = in[offset + 2] & 255;
+    int ch1 = in[offset + 3] & 255;
+    offset += 4;
     return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
   }
 
@@ -587,16 +587,18 @@ public class VectorizedRleValuesReader extends ValuesReader
       case 0:
         return 0;
       case 1:
-        return in.read();
+        return in[offset++] & 255;
       case 2: {
-        int ch2 = in.read();
-        int ch1 = in.read();
+        int ch2 = in[offset] & 255;
+        int ch1 = in[offset + 1] & 255;
+        offset += 2;
         return (ch1 << 8) + ch2;
       }
       case 3: {
-        int ch3 = in.read();
-        int ch2 = in.read();
-        int ch1 = in.read();
+        int ch3 = in[offset] & 255;
+        int ch2 = in[offset + 1] & 255;
+        int ch1 = in[offset + 2] & 255;
+        offset += 3;
         return (ch1 << 16) + (ch2 << 8) + (ch3 << 0);
       }
       case 4: {
@@ -625,18 +627,18 @@ public class VectorizedRleValuesReader extends ValuesReader
         case PACKED:
           int numGroups = header >>> 1;
           this.currentCount = numGroups * 8;
+          int bytesToRead = ceil8(this.currentCount * this.bitWidth);
 
           if (this.currentBuffer.length < this.currentCount) {
             this.currentBuffer = new int[this.currentCount];
           }
           currentBufferIdx = 0;
           int valueIndex = 0;
-          while (valueIndex < this.currentCount) {
-            // values are bit packed 8 at a time, so reading bitWidth will always work
-            ByteBuffer buffer = in.slice(bitWidth);
-            this.packer.unpack8Values(buffer, buffer.position(), this.currentBuffer, valueIndex);
+          for (int byteIndex = offset; valueIndex < this.currentCount; byteIndex += this.bitWidth) {
+            this.packer.unpack8Values(ByteBuffer.wrap(in), byteIndex, this.currentBuffer, valueIndex);
             valueIndex += 8;
           }
+          offset += bytesToRead;
           return;
         default:
           throw new ParquetDecodingException("not a valid mode " + this.mode);

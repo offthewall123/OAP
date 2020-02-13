@@ -17,7 +17,9 @@
 
 package org.apache.spark.sql.execution.datasources.parquet
 
-import org.apache.parquet.bytes.{BytesInput, HeapByteBufferAllocator}
+import java.nio.ByteBuffer
+
+import org.apache.parquet.bytes.HeapByteBufferAllocator
 import org.apache.parquet.column.values.rle.RunLengthBitPackingHybridValuesWriter
 
 import org.apache.spark.SparkFunSuite
@@ -32,9 +34,9 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
     (0 until 100).foreach(i => writer.writeInteger(i % 3))
 
     // init reader
-    val data = writer.getBytes.toByteArray
+    val data = writer.getBytes.toByteBuffer
     val reader = new SkippableVectorizedRleValuesReader(3)
-    reader.initFromPage(100, BytesInput.from(data).toInputStream)
+    reader.initFromPage(100, data, 0)
 
     // test skip and read Integer
     reader.skipIntegers(32)
@@ -51,9 +53,9 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
     (0 until 10).foreach(_ => writer.writeInteger(5))
 
     // init reader
-    val data = writer.getBytes.toByteArray
+    val data = writer.getBytes.toByteBuffer
     val reader = new SkippableVectorizedRleValuesReader(3)
-    reader.initFromPage(20, BytesInput.from(data).toInputStream)
+    reader.initFromPage(20, data, 0)
 
     // test skip and read Integer
     reader.skipIntegers(8)
@@ -70,9 +72,9 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
     (0 until 10).foreach(_ => writer.writeBoolean(false))
 
     // init reader
-    val data = writer.getBytes.toByteArray
+    val data = writer.getBytes.toByteBuffer
     val reader = new SkippableVectorizedRleValuesReader(3)
-    reader.initFromPage(20, BytesInput.from(data).toInputStream)
+    reader.initFromPage(20, data, 0)
 
     // test skip and read boolean
     reader.skipBoolean()
@@ -87,7 +89,7 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
     // init reader
     val data = Array.emptyByteArray
     val reader = new SkippableVectorizedRleValuesReader()
-    reader.initFromPage(0, BytesInput.from(data).toInputStream)
+    reader.initFromPage(0, ByteBuffer.wrap(data), 0)
 
     // skipByte should throw UnsupportedOperationException
     intercept[UnsupportedOperationException] {

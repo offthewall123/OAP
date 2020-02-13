@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
+import java.nio.ByteBuffer
+
 import org.apache.parquet.bytes.BytesInput
 import org.apache.parquet.column.Dictionary
 import org.apache.parquet.column.values.deltastrings.DeltaByteArrayReader
@@ -94,9 +96,7 @@ private[oap] case class DeltaByteArrayDataFiberParser(
         Platform.copyMemory(bytes, Platform.BYTE_ARRAY_OFFSET,
           fiberBytes, Platform.LONG_ARRAY_OFFSET, bits.toLongArray().length * 8)
 
-        val inputStream = BytesInput.from(bytes).toInputStream
-        inputStream.skipFully(bitsDataLength + 4)
-        valuesReader.initFromPage(rowCount, inputStream)
+        valuesReader.initFromPage(rowCount, ByteBuffer.wrap(bytes), bitsDataLength + 4)
 
         (0 until rowCount).foreach{i =>
           if (bits.get(i)) {
@@ -131,9 +131,7 @@ private[oap] case class PlainDictionaryFiberParser(
     val baseOffset = Platform.BYTE_ARRAY_OFFSET + bits.toLongArray().length * 8
     val bitsDataLength = bits.toLongArray().length * 8
 
-    val inputStream = BytesInput.from(bytes).toInputStream
-    inputStream.skipFully(bits.toLongArray().length * 8 + 4)
-    valuesReader.initFromPage(rowCount, inputStream)
+    valuesReader.initFromPage(rowCount, ByteBuffer.wrap(bytes), bits.toLongArray().length * 8 + 4)
 
     dataType match {
       case IntegerType =>

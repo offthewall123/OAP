@@ -152,7 +152,7 @@ public class ParquetCacheableFileReader extends ParquetFileReader {
       // TODO impl mixed read model.
       byte[] chunksBytes = binaryCacheEnabled ? readFromCache(f) : readFromFile(f);
       return new WorkaroundChunk(
-          descriptor, Collections.singletonList(ByteBuffer.wrap(chunksBytes)), f);
+          descriptor, ByteBuffer.wrap(chunksBytes), (int)offset, f);
     }
 
     private byte[] readFromCache(SeekableInputStream f) {
