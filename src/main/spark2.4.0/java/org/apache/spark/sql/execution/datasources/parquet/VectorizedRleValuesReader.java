@@ -115,6 +115,22 @@ public class VectorizedRleValuesReader extends ValuesReader
     }
   }
 
+  // Initialize the reader from a buffer. This is used for the V2 page encoding where the
+  // definition are in its own buffer.
+  public void initFromBuffer(int valueCount, byte[] data) {
+    this.offset = 0;
+    this.in = data;
+    this.end = data.length;
+    if (bitWidth == 0) {
+      // 0 bit width, treat this as an RLE run of valueCount number of 0's.
+      this.mode = MODE.RLE;
+      this.currentCount = valueCount;
+      this.currentValue = 0;
+    } else {
+      this.currentCount = 0;
+    }
+  }
+
   /**
    * Initializes the internal state for decoding ints of `bitWidth`.
    */

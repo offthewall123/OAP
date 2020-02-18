@@ -342,8 +342,8 @@ public class SkippableVectorizedColumnReader extends VectorizedColumnReader {
     int bitWidth = BytesUtils.getWidthFromMaxInt(descriptor.getMaxDefinitionLevel());
     // do not read the length from the stream. v2 pages handle dividing the page bytes.
     this.defColumn = new SkippableVectorizedRleValuesReader(bitWidth, false);
-    this.defColumn.initFromPage(
-            this.pageValueCount, page.getDefinitionLevels().toByteBuffer(), 0);
+    this.defColumn.initFromBuffer(
+            this.pageValueCount, page.getDefinitionLevels().toByteArray());
     // defColumnRef reference defColumn and type is SkippableVectorizedRleValuesReader
     this.defColumnRef = (SkippableVectorizedRleValuesReader) this.defColumn;
     try {

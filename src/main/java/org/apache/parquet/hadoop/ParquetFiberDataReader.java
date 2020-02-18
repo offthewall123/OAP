@@ -90,7 +90,7 @@ public class ParquetFiberDataReader implements Closeable {
     this.footer = footer;
     this.f = HadoopStreams.wrap(fs.open(file));
     this.fileMetaData = footer.getFileMetaData();
-    int pageSize = 0; // FIXME
+    int pageSize = ParquetOutputFormat.getPageSize(conf);
     this.codecFactory = new CodecFactory(conf, pageSize);
   }
 

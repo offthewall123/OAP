@@ -442,7 +442,7 @@
           <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <sourceDirectories>
             <directory>src/main/scala</directory>
-            <directory>src/main/spark2.4.4/scala</directory>
+            <directory>src/main/spark2.4.0/scala</directory>
           </sourceDirectories>
           <testSourceDirectories>
             <directory>src/test/scala</directory>
@@ -601,11 +601,11 @@
           <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <sourceDirectories>
             <directory>src/main/java</directory>
-            <directory>src/spark2.4.4/scala</directory>
+            <directory>src/spark2.4.0/scala</directory>
           </sourceDirectories>
           <testSourceDirectories>
             <directory>src/test/java</directory>
-            <directory>src/test/spark2.4.4/java</directory>
+            <directory>src/test/spark2.4.0/java</directory>
           </testSourceDirectories>
           <configLocation>checkstyle.xml</configLocation>
           <outputFile>${basedir}/target/checkstyle-output.xml</outputFile>
@@ -650,8 +650,8 @@
             </goals>
             <configuration>
               <sources>
-                <source>src/main/spark2.4.4/java</source>
-                <source>src/main/spark2.4.4/scala</source>
+                <source>src/main/spark2.4.0/java</source>
+                <source>src/main/spark2.4.0/scala</source>
                 <source>src/main/parquet1.9.0/java</source>
               </sources>
             </configuration>
