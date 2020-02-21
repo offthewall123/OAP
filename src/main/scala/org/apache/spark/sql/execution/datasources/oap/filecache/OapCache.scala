@@ -298,13 +298,11 @@ class NonEvictPMCache(pmSize: Long,
     if (cacheMap.contains(fiber)) {
       cacheMap.get(fiber)
     } else {
-      // throw new RuntimeException("Key not found")
       null
     }
   }
 
   override def getFibers: Set[FiberId] = {
-    // throw new RuntimeException("Unsupported")
     cacheMap.keySet().asScala.toSet
   }
 
@@ -409,20 +407,17 @@ class VMemCache extends OapCache with Logging {
         if (!initialized) {
           val sparkEnv = SparkEnv.get
           val conf = sparkEnv.conf
-          // The NUMA id should be set when the executor process start up. However, Spark don't
-          // support NUMA binding currently.
-          var numaId = conf.getInt("spark.executor.numa.id", -1)
           val executorId = sparkEnv.executorId.toInt
-          val map = PersistentMemoryConfigUtils.parseConfig(conf)
-          if (numaId == -1) {
-            logWarning(s"Executor ${executorId} is not bind with NUMA. It would be better" +
-              s" to bind executor with NUMA when cache data to Intel Optane DC persistent memory.")
-            // Just round the executorId to the total NUMA number.
-            // TODO: improve here
-            numaId = executorId % PersistentMemoryConfigUtils.totalNumaNode(conf)
+          // val map = PersistentMemoryConfigUtils.parseConfig(conf)
+          var initialPath : String = null
+          val map = conf.get("spark.oap.memory.aep.initial.paths")
+          val mapPath = map.split(",")
+          if (executorId % 2 == 0) {
+            initialPath = mapPath(0)
+          } else {
+            initialPath = mapPath(1)
           }
-          val initialPath = map.get(numaId).get
-          val fullPath = Utils.createTempDir(initialPath + File.separator + executorId)
+         val fullPath = Utils.createTempDir(initialPath + File.separator + executorId)
 
           require(fullPath.isDirectory(), "VMEMCache initialize path must be a directory")
           val success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
@@ -486,7 +481,6 @@ class VMemCache extends OapCache with Logging {
         logDebug(s"$fiberKey is still stored.")
       }
     }
-    // logInfo(fiberSet.toString());
     fiberSet.toSet
   }
 
@@ -513,7 +507,6 @@ class VMemCache extends OapCache with Logging {
     logDebug(s"Current status is evict:$cacheEvictCount," +
       s" count:$cacheTotalCount, size:$cacheTotalSize")
     CacheStats(
-      // fiberSet.size, // dataFiberCount
       cacheTotalCount, // dataFiberCount
       cacheTotalSize, // dataFiberSize JNIGet
       0, // indexFiberCount

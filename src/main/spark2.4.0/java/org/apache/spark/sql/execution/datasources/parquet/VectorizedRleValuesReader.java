@@ -95,7 +95,8 @@ public class VectorizedRleValuesReader extends ValuesReader
   @Override
   public void initFromPage(int valueCount, ByteBuffer page, int start) throws IOException {
     this.offset = start;
-    this.in = new byte[page.remaining()];
+    this.in = new byte[page.capacity()];
+    page.get(in, 0, in.length);
     if (fixedWidth) {
       if (bitWidth != 0) {
         int length = readIntLittleEndian();
