@@ -102,6 +102,7 @@ private[sql] object MemoryManager extends Logging {
       case "pm" => new PersistentMemoryManager(sparkEnv)
       case "hybrid" => new HybridMemoryManager(sparkEnv)
       case "tmp" => new TmpDramMemoryManager(sparkEnv)
+      case "external" => new TmpDramMemoryManager(sparkEnv)
       case _ => throw new UnsupportedOperationException(
         s"The memory manager: ${memoryManagerOpt} is not supported now")
     }
