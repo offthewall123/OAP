@@ -873,14 +873,15 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       }
     }
   }
+
   init()
 
   private val cacheHitCount: AtomicLong = new AtomicLong(0)
   private val cacheMissCount: AtomicLong = new AtomicLong(0)
   private val cacheTotalGetTime: AtomicLong = new AtomicLong(0)
-  private var cacheTotalCount: Long = 0
-  private var cacheEvictCount: Long = 0
-  private var cacheTotalSize: Long = 0
+  private var cacheTotalCount: AtomicLong = new AtomicLong(0)
+  private var cacheEvictCount: AtomicLong = new AtomicLong(0)
+  private var cacheTotalSize: AtomicLong = new AtomicLong(0)
 
   private def emptyDataFiber(fiberLength: Long): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
@@ -1000,12 +1001,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   override def cacheStats: CacheStats = {
     val array = new Array[Long](4)
     plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).metrics(array)
-    cacheTotalSize = array(3) + array(1) // Memory store and external store used size
+    cacheTotalSize = new AtomicLong(array(3) + array(1)) // Memory store and external store used size
 
     if (fiberType == FiberType.INDEX) {
       CacheStats(
         0, 0,
-        cacheTotalCount, cacheTotalSize,
+        cacheTotalCount.get(),
+        cacheTotalSize.get(),
         cacheGuardian.pendingFiberCount, // pendingFiberCount
         cacheGuardian.pendingFiberSize, // pendingFiberSize
         0, 0, 0, 0, 0, // For index cache, the data fiber metrics should always be zero
@@ -1013,11 +1015,12 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         cacheMissCount.get(), // indexFiberMissCount
         cacheHitCount.get(), // indexFiberLoadCount
         cacheTotalGetTime.get(), // indexTotalLoadTime
-        cacheEvictCount // indexEvictionCount
+        cacheEvictCount.get() // indexEvictionCount
       )
     } else {
       CacheStats(
-        cacheTotalCount, cacheTotalSize,
+        cacheTotalCount.get(),
+        cacheTotalSize.get(),
         0, 0,
         cacheGuardian.pendingFiberCount, // pendingFiberCount
         cacheGuardian.pendingFiberSize, // pendingFiberSize
@@ -1025,7 +1028,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         cacheMissCount.get(), // dataFiberMissCount
         cacheHitCount.get(), // dataFiberLoadCount
         cacheTotalGetTime.get(), // dataTotalLoadTime
-        cacheEvictCount, // dataEvictionCount
+        cacheEvictCount.get(), // dataEvictionCount
         0, 0, 0, 0, 0) // For data cache, the index fiber metrics should always be zero
     }
   }
