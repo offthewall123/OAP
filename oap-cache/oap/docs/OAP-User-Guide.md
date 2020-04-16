@@ -306,7 +306,7 @@ For Orc data format, provides following conf options:
 ```
 Note: If "PendingFiber Size" (on spark web-UI OAP page) is large, or some tasks failed due to "cache guardian use too much memory", user could set spark.sql.oap.cache.guardian.memory.size config to a larger number, which default size is 10GB. Besides, user could increase spark.sql.oap.cache.guardian.free.thread.nums or decrease spark.sql.oap.cache.dispose.timeout.ms to accelerate memory free.
 
-### Use External cache strategy
+#### Use External cache strategy
 
 OAP supports arrow-plasma as external cache now and will support more other types in the future.[Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performance shared-memory object store.
 
