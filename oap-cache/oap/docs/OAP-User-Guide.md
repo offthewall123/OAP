@@ -317,7 +317,7 @@ You can also check DCPM cache size by checking the usage of disk space using com
 
 ### Use External cache
 
-OAP supports arrow-plasma as external cache now and will support more other types in the future.[Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performanceshared-memory object store.
+OAP supports arrow-plasma as external cache now and will support more other types in the future.[Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performance shared-memory object store.
 
 Provide the following conf options:
 
