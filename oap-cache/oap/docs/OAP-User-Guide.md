@@ -315,6 +315,16 @@ Besides, you can verify numa binding status by confirming keywords like "numactl
 
 You can also check DCPM cache size by checking the usage of disk space using command 'df -h'. For Guava/Non-evictable strategies, the command will show disk space usage increases along with workload execution. But for vmemcache strategy, you will see disk usage becomes to cache initial size once DCPM cache initialized even workload haven't actually used so much space and this value doesn't change during workload execution.
 
+### Use External cache
+
+OAP supports arrow-plasma as external cache now and will support more other types in the future.[Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performanceshared-memory object store.
+
+Provide the following conf options:
+
+```
+--conf spark.oap.cache.strategy=external
+--conf spark.sql.oap.cache.external.client.pool.size=30
+```
 ## Run TPC-DS Benchmark for OAP Cache
 
 The section provides instructions and tools for running TPC-DS queries to evaluate the cache performance at various configurations. TPC-DS suite has many queries and we select 9 I/O intensive queries for making the performance evaluation simple.
