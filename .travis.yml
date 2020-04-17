@@ -19,7 +19,7 @@ jobs:
       - cd build
       - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=deb
       - make package
-      - sudo rpm -i libvmemcache*.rpm
+      - sudo dpkg -i libvmemcache*.deb
       - popd
       - #install arrow and plasms
       - cd /tmp
