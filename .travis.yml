@@ -24,7 +24,7 @@ jobs:
       - cd /tmp
       - git clone https://github.com/jikunshang/arrow-1.git
       - cd arrow-1 && git checkout rebase_oap_master
-      - cd /cpp
+      - cd cpp
       - rm -rf release
       - mkdir release
       - cd release
