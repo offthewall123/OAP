@@ -5,8 +5,6 @@ jobs:
   include:
     #Other modules can refer to oap-cache-oap to build independent travis-ci job,
     #oap-cache-oap is a CI building demo of the corresponding module oap-cache/oap.
-    - name: oap-arrow-plasma
-
     - name: oap-cache-oap
       before_install:
       - sudo apt-get install libpthread-stubs0-dev
