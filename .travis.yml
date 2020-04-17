@@ -9,9 +9,9 @@ jobs:
     before_install:
     - echo $TRAVIS_COMMIT_MESSAGE
     - sudo apt-get install cmake
-    before_script:
     - #install numactl-devel
     - apt-get install numactl-devel libcurl-devel rpm-build
+    before_script:
     - #install vemecache
     - git clone https://github.com/pmem/vmemcache.git
     - pushd vmemcache
