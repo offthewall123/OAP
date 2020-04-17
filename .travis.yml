@@ -36,6 +36,7 @@ jobs:
       - sudo make install -j$(nproc)
       - cd ../../java/plasma/
       - mvn clean install
+      - ls -R ~/.m2
       install:
       - # Download spark 2.4.4
       - "[ -f spark ] || mkdir spark && cd spark && wget http://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz && cd .."
