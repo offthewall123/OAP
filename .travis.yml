@@ -6,7 +6,11 @@ jobs:
     #Other modules can refer to oap-cache-oap to build independent travis-ci job,
     #oap-cache-oap is a CI building demo of the corresponding module oap-cache/oap.
     - name: oap-arrow-plasma
+
+    - name: oap-cache-oap
       before_install:
+      - sudo apt-get install libpthread-stubs0-dev
+      - sudo apt-get install libnuma-dev
       - echo $TRAVIS_COMMIT_MESSAGE
       - sudo apt-get install cmake
       - #install numactl-devel
@@ -34,11 +38,6 @@ jobs:
       - sudo make install -j$(nproc)
       - cd ../../java/plasma/
       - mvn clean install
-    - name: oap-cache-oap
-      before_install:
-      - sudo apt-get install cmake
-      - sudo apt-get install libpthread-stubs0-dev
-      - sudo apt-get install libnuma-dev
       install:
       - # Download spark 2.4.4
       - "[ -f spark ] || mkdir spark && cd spark && wget http://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz && cd .."
