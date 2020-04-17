@@ -28,10 +28,12 @@ jobs:
       - rm -rf release
       - mkdir release
       - cd release
-      script:
-      - cd ${TRAVIS_BUILD_DIR}
-      - cd cpp && mkdir build && cd build
-      - cmake .. && make
+      - #build libarrow, libplasma, libplasma_java
+      - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g -O3" -DCMAKE_CXX_FLAGS="-g -O3" -DARROW_BUILD_TESTS=on -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED ..
+      - make -j$(nproc)
+      - sudo make install -j$(nproc)
+      - cd ../../java/plasma/
+      - mvn clean install
     - name: oap-cache-oap
       before_install:
       - sudo apt-get install cmake
