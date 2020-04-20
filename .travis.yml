@@ -5,7 +5,8 @@ jobs:
   include:
     #Other modules can refer to oap-cache-oap to build independent travis-ci job,
     #oap-cache-oap is a CI building demo of the corresponding module oap-cache/oap.
-    - name: oap-cache-oap
+    - stage: cache
+      name: oap-cache-oap
       before_install:
       - sudo apt-get install libpthread-stubs0-dev
       - sudo apt-get install libnuma-dev
@@ -52,7 +53,39 @@ jobs:
       script:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory test
+    - stage: shuffle
     - name: oap-shuffle-remote-shuffle
+      before_install:
+      - sudo apt-get install libpthread-stubs0-dev
+      - sudo apt-get install libnuma-dev
+      - echo $TRAVIS_COMMIT_MESSAGE
+      - sudo apt-get install cmake
+      - #install numactl-devel
+      - sudo apt-get install libnuma-dev
+      - #install vemecache
+      - git clone https://github.com/pmem/vmemcache.git
+      - pushd vmemcache
+      - mkdir build
+      - cd build
+      - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=deb
+      - make package
+      - sudo dpkg -i libvmemcache*.deb
+      - popd
+      - #install arrow and plasms
+      - cd /tmp
+      - git clone https://github.com/jikunshang/arrow-1.git
+      - cd arrow-1 && git checkout rebase_oap_master
+      - cd cpp
+      - rm -rf release
+      - mkdir release
+      - cd release
+      - #build libarrow, libplasma, libplasma_java
+      - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g -O3" -DCMAKE_CXX_FLAGS="-g -O3" -DARROW_BUILD_TESTS=on -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED ..
+      - make -j$(nproc)
+      - sudo make install -j$(nproc)
+      - cd ../../java
+      - mvn clean -DskipTests install >arrow_install.log 2>&1
+      - echo $(ls -R ~/.m2/repository/org/apache/arrow/arrow-plasma)
       script:
       - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/
       - mvn -q test
