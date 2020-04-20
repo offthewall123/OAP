@@ -35,7 +35,7 @@ jobs:
       - make -j$(nproc)
       - sudo make install -j$(nproc)
       - cd ../../java
-      - mvn clean -DskipTests install
+      - mvn clean -DskipTests install >arrow_install.log 2>&1
       - echo $(ls -R ~/.m2/repository/org/apache/arrow/arrow-plasma)
       install:
       - # Download spark 2.4.4
