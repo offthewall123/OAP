@@ -931,7 +931,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
         //      TODO: PASS CI
         //      val buf: ByteBuffer = null
-        val buf: ByteBuffer = plasmaClient.getByteBuffer(objectId, -1, false)
+        val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
         cacheHitCount.addAndGet(1)
         fiberCache = emptyDataFiber(buf.capacity())
         fiberCache.fiberId = fiberId
