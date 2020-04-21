@@ -11,6 +11,16 @@ install:
 - "tar -xf ./spark/spark-2.4.4-bin-hadoop2.7.tgz"
 - "export SPARK_HOME=`pwd`/spark-2.4.4-bin-hadoop2.7"
 before_script:
+- #install vemecache
+- git clone https://github.com/pmem/vmemcache.git
+- pushd vmemcache
+- mkdir build
+- cd build
+- cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=deb
+- make package
+- sudo dpkg -i libvmemcache*.deb
+- popd
+- #install memkind
 - cd /tmp
 - git clone https://github.com/memkind/memkind.git
 - cd memkind && ./build.sh
@@ -18,4 +28,4 @@ before_script:
 - sudo make install
 - cd ${TRAVIS_BUILD_DIR}
 script:
-- mvn clean -q -Ppersistent-memory test
+- mvn clean -q -Ppersistent-memory,vmemcache test
