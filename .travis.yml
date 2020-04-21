@@ -54,7 +54,7 @@ jobs:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory test
     - stage: shuffle
-    - name: oap-shuffle-remote-shuffle
+      name: oap-shuffle-remote-shuffle
       before_install:
       - sudo apt-get install libpthread-stubs0-dev
       - sudo apt-get install libnuma-dev
