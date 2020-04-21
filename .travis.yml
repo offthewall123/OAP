@@ -25,6 +25,7 @@ jobs:
       - popd
       - #install arrow and plasms
       - cd /tmp
+      - # TODO change to Intel-bigdata one
       - git clone https://github.com/jikunshang/arrow-1.git
       - cd arrow-1 && git checkout rebase_oap_master
       - cd cpp
@@ -37,7 +38,6 @@ jobs:
       - sudo make install -j$(nproc)
       - cd ../../java
       - mvn clean -DskipTests install >arrow_install.log 2>&1
-      - echo $(ls -R ~/.m2/repository/org/apache/arrow/arrow-plasma)
       install:
       - # Download spark 2.4.4
       - "[ -f spark ] || mkdir spark && cd spark && wget http://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz && cd .."
@@ -85,7 +85,6 @@ jobs:
       - sudo make install -j$(nproc)
       - cd ../../java
       - mvn clean -DskipTests install >arrow_install.log 2>&1
-      - echo $(ls -R ~/.m2/repository/org/apache/arrow/arrow-plasma)
       script:
       - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/
       - mvn -q test
