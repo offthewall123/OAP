@@ -52,7 +52,7 @@ jobs:
       - cd ${TRAVIS_BUILD_DIR}
       script:
       - cd ${TRAVIS_BUILD_DIR}
-      - mvn clean -q -Ppersistent-memory test
+      - mvn clean -q -Ppersistent-memory -Pvmemcache test
     - stage: shuffle
       name: oap-shuffle-remote-shuffle
       before_install:
