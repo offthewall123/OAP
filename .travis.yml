@@ -85,6 +85,8 @@ jobs:
       - sudo make install -j$(nproc)
       - cd ../../java
       - mvn clean -q -DskipTests install
+      install:
+      - #echo install step
       script:
       - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/
       - mvn -q test
