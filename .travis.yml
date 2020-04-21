@@ -28,4 +28,4 @@ before_script:
 - sudo make install
 - cd ${TRAVIS_BUILD_DIR}
 script:
-- mvn clean -q -Ppersistent-memory,vmemcache test
+- mvn clean -q -Ppersistent-memory -Pvmemcache test
