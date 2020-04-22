@@ -5,8 +5,7 @@ jobs:
   include:
     #Other modules can refer to oap-cache-oap to build independent travis-ci job,
     #oap-cache-oap is a CI building demo of the corresponding module oap-cache/oap.
-    - stage: cache
-      name: oap-cache-oap
+    - name: oap-cache-oap
       before_install:
       - cd ${TRAVIS_BUILD_DIR}/oap-cache/oap/dev
       - ./install_arrow.sh
@@ -25,11 +24,10 @@ jobs:
       script:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory -Pvmemcache test
-    - stage: shuffle
-      name: oap-shuffle-remote-shuffle
-      before_install:
-      - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/dev
-      - ./install_arrow.sh
+    - name: oap-shuffle-remote-shuffle
+#      before_install:
+#      - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/dev
+#      - ./install_arrow.sh
       install:
       - #echo install step
       script:
