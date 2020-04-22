@@ -212,6 +212,19 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
 private[filecache] object OapCache {
 
+  def detectPM(): Boolean{
+    val detectAEPCmd = "mount" #| "grep pmem"
+    val detectAEPCmdRes = detectAEPCmd.!!
+    val daxPattern = ".*dax.*".r();
+    val detectAEPResArr:Array[String] = detectAEPCmdRes.split("\\n")
+    for(i <- 0 to detectAEPResArr.length-1){
+    if(!daxPattern.matches(detectAEPResArr(i))){
+        false
+      }
+    }
+    true
+  }
+
   def apply(sparkEnv: SparkEnv, cacheMemory: Long,
             cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
     apply(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, cacheMemory, cacheGuardianMemory, fiberType)
@@ -219,6 +232,9 @@ private[filecache] object OapCache {
 
   def apply(sparkEnv: SparkEnv, configEntry: ConfigEntry[String],
             cacheMemory: Long, cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
+    if(!detectPM()){
+      throw new Exception("There is no AEP on this machine,please check.")
+    }
     val conf = sparkEnv.conf
     val oapCacheOpt = conf.get(
       configEntry.key,
