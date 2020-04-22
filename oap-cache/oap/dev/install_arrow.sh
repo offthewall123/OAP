@@ -1,8 +1,8 @@
+sudo apt-get update
 sudo apt-get install libpthread-stubs0-dev
+sudo apt-get install libnuma-dev
 echo $TRAVIS_COMMIT_MESSAGE
 sudo apt-get install cmake
-#install numactl-devel
-sudo apt-get install libnuma-dev
 #install vemecache
 cd /tmp
 git clone https://github.com/pmem/vmemcache.git
