@@ -43,6 +43,8 @@ import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
+import scala.sys.process._
+
 private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends CacheGuardian(maxMemory)
   with Logging {
 
