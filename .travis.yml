@@ -8,36 +8,8 @@ jobs:
     - stage: cache
       name: oap-cache-oap
       before_install:
-      - sudo apt-get install libpthread-stubs0-dev
-      - sudo apt-get install libnuma-dev
-      - echo $TRAVIS_COMMIT_MESSAGE
-      - sudo apt-get install cmake
-      - #install numactl-devel
-      - sudo apt-get install libnuma-dev
-      - #install vemecache
-      - git clone https://github.com/pmem/vmemcache.git
-      - pushd vmemcache
-      - mkdir build
-      - cd build
-      - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=deb
-      - make package
-      - sudo dpkg -i libvmemcache*.deb
-      - popd
-      - #install arrow and plasms
-      - cd /tmp
-      - # TODO change to Intel-bigdata one
-      - git clone https://github.com/jikunshang/arrow-1.git
-      - cd arrow-1 && git checkout rebase_oap_master
-      - cd cpp
-      - rm -rf release
-      - mkdir release
-      - cd release
-      - #build libarrow, libplasma, libplasma_java
-      - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g -O3" -DCMAKE_CXX_FLAGS="-g -O3" -DARROW_BUILD_TESTS=on -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED ..
-      - make -j$(nproc)
-      - sudo make install -j$(nproc)
-      - cd ../../java
-      - mvn clean -q -DskipTests install
+      - cd ${TRAVIS_BUILD_DIR}/oap-cache/oap/dev
+      - ./install_arrow.sh
       install:
       - # Download spark 2.4.4
       - "[ -f spark ] || mkdir spark && cd spark && wget http://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz && cd .."
@@ -56,37 +28,10 @@ jobs:
     - stage: shuffle
       name: oap-shuffle-remote-shuffle
       before_install:
-      - sudo apt-get install libpthread-stubs0-dev
-      - sudo apt-get install libnuma-dev
-      - echo $TRAVIS_COMMIT_MESSAGE
-      - sudo apt-get install cmake
-      - #install numactl-devel
-      - sudo apt-get install libnuma-dev
-      - #install vemecache
-      - git clone https://github.com/pmem/vmemcache.git
-      - pushd vmemcache
-      - mkdir build
-      - cd build
-      - cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCPACK_GENERATOR=deb
-      - make package
-      - sudo dpkg -i libvmemcache*.deb
-      - popd
-      - #install arrow and plasms
-      - cd /tmp
-      - git clone https://github.com/jikunshang/arrow-1.git
-      - cd arrow-1 && git checkout rebase_oap_master
-      - cd cpp
-      - rm -rf release
-      - mkdir release
-      - cd release
-      - #build libarrow, libplasma, libplasma_java
-      - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g -O3" -DCMAKE_CXX_FLAGS="-g -O3" -DARROW_BUILD_TESTS=on -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED ..
-      - make -j$(nproc)
-      - sudo make install -j$(nproc)
-      - cd ../../java
-      - mvn clean -q -DskipTests install
+      - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/dev
+      - ./install_arrow.sh
       install:
       - #echo install step
       script:
-      - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle/
+      - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle
       - mvn -q test
