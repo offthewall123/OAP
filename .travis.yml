@@ -16,6 +16,8 @@ jobs:
       - ./install_vmemcache.sh
       - ./install_arrow.sh
       - ./install_memkind.sh
+      install:
+      - #echo install step
       script:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory -Pvmemcache test
