@@ -17,7 +17,10 @@ jobs:
       - ./install_arrow.sh
       - ./install_memkind.sh
       install:
-      - #echo install step
+      - # Download spark 2.4.4
+      - "[ -f spark ] || mkdir spark && cd spark && wget http://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz && cd .."
+      - "tar -xf ./spark/spark-2.4.4-bin-hadoop2.7.tgz"
+      - "export SPARK_HOME=`pwd`/spark-2.4.4-bin-hadoop2.7"
       script:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory -Pvmemcache test
