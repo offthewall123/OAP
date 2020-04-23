@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 
 import scala.collection.JavaConverters._
+import scala.language.postfixOps
+import scala.sys.process._
 
 import com.google.common.cache._
 import com.google.common.hash._
@@ -43,7 +45,7 @@ import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
-import scala.sys.process._
+
 
 private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends CacheGuardian(maxMemory)
   with Logging {
@@ -212,17 +214,12 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
   }
 }
 
-private[filecache] object OapCache {
-
-  def detectPM(): Boolean{
-    val detectAEPCmd = "mount" #| "grep pmem"
-    val detectAEPCmdRes = detectAEPCmd.!!
-    val daxPattern = ".*dax.*".r();
-    val detectAEPResArr:Array[String] = detectAEPCmdRes.split("\\n")
-    for(i <- 0 to detectAEPResArr.length-1){
-    if(!daxPattern.matches(detectAEPResArr(i))){
-        false
-      }
+private[filecache] object OapCache extends Logging {
+  def detectPM(): Boolean = {
+    val detectRes = "sudo ipmctl show -dimm".!!
+    val notFoundRegex = ".*not.*".r()
+    if (notFoundRegex.matches(detectRes)) {
+      false
     }
     true
   }
@@ -234,13 +231,15 @@ private[filecache] object OapCache {
 
   def apply(sparkEnv: SparkEnv, configEntry: ConfigEntry[String],
             cacheMemory: Long, cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
-    if(!detectPM()){
-      throw new Exception("There is no AEP on this machine,please check.")
-    }
+
     val conf = sparkEnv.conf
     val oapCacheOpt = conf.get(
       configEntry.key,
       configEntry.defaultValue.get).toLowerCase
+    if(!detectPM()) {
+      logWarning(s"There is no AEP on this machine,please check it." )
+      new SimpleOapCache()
+    }
     oapCacheOpt match {
       case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
       case "vmem" => new VMemCache(fiberType)
