@@ -45,8 +45,6 @@ import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
-
-
 private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends CacheGuardian(maxMemory)
   with Logging {
 
@@ -215,11 +213,13 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 }
 
 private[filecache] object OapCache extends Logging {
+  var detectAEPRes = "sudo ipmctl show -dimm".!!
+  val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
   def detectPM(): Boolean = {
-    val detectRes = "sudo ipmctl show -dimm".!!
     val notFoundRegex = ".*not.*".r()
-    if (notFoundRegex.matches(detectRes)) {
-      false
+    val noAEPRegex = ".*No.*".r()
+    if(noAEPRegex.matches(detectAEPRes) || notFoundRegex.matches(detectAEPRes)) {
+      return false
     }
     true
   }
@@ -231,25 +231,30 @@ private[filecache] object OapCache extends Logging {
 
   def apply(sparkEnv: SparkEnv, configEntry: ConfigEntry[String],
             cacheMemory: Long, cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
-
     val conf = sparkEnv.conf
     val oapCacheOpt = conf.get(
       configEntry.key,
       configEntry.defaultValue.get).toLowerCase
-    if(!detectPM()) {
-      logWarning(s"There is no AEP on this machine,please check it." )
+    if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
+      if (!detectPM()) {
+        logWarning(s"There is no Optane PMem DIMMs detected, " +
+          s"has to fall back to simple cache implementation" )
+        new SimpleOapCache()
+      }
+      else {
+        oapCacheOpt match {
+          case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+          case "vmem" => new VMemCache(fiberType)
+          case "noevict" => new NonEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
+          case "external" => new ExternalCache(fiberType)
+        }
+      }
+    }
+    else {
+      logWarning(s"There is no Optane PMem DIMMs detected, " +
+        s"has to fall back to simple cache implementation" )
       new SimpleOapCache()
     }
-    oapCacheOpt match {
-      case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
-      case "vmem" => new VMemCache(fiberType)
-      case "simple" => new SimpleOapCache()
-      case "noevict" => new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
-      case "external" => new ExternalCache(fiberType)
-      case _ => throw new UnsupportedOperationException(
-        s"The cache backend: ${oapCacheOpt} is not supported now")
-    }
-
   }
 }
 
