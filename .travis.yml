@@ -10,17 +10,17 @@ jobs:
 #      - sudo apt-get update
       - sudo apt-get install libpthread-stubs0-dev
       - sudo apt-get install libnuma-dev
-      - echo $TRAVIS_COMMIT_MESSAGE
       - sudo apt-get install cmake
-      - cd ${TRAVIS_BUILD_DIR}/oap-cache/oap/dev
-      - ./install_vmemcache.sh
-      - ./install_arrow.sh
-      - ./install_memkind.sh
       install:
       - # Download spark 2.4.4
       - "[ -f spark ] || mkdir spark && cd spark && wget http://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz && cd .."
       - "tar -xf ./spark/spark-2.4.4-bin-hadoop2.7.tgz"
       - "export SPARK_HOME=`pwd`/spark-2.4.4-bin-hadoop2.7"
+      before_script:
+      - cd ${TRAVIS_BUILD_DIR}/dev
+      - ./install_vmemcache.sh
+      - ./install_arrow.sh
+      - ./install_memkind.sh
       script:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory -Pvmemcache test
