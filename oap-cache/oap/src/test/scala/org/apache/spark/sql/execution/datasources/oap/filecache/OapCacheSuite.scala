@@ -17,6 +17,9 @@
 
 package org.apache.spark.sql.execution.datasources.oap.filecache
 
+import scala.language.postfixOps
+import scala.sys.process._
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.test.oap.SharedOapContext
 
@@ -29,10 +32,11 @@ class OapCacheSuite extends SharedOapContext with Logging{
   test("detectPM") {
     val notFound = "Command 'ipmctl' not found."
     val noDIMMs = "No DIMMs in the system."
-    assert(OapCache.detectPM(), true)
+    OapCache.detectAEPRes = "sudo ipmctl show -dimm".!!
+    assert(OapCache.detectPM() == true)
     OapCache.detectAEPRes = notFound
-    assert(OapCache.detectPM(), false)
+    assert(OapCache.detectPM() == false)
     OapCache.detectAEPRes = noDIMMs
-    assert(OapCache.detectPM(), false)
+    assert(OapCache.detectPM() == false)
   }
 }

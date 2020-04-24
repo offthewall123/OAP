@@ -218,7 +218,8 @@ private[filecache] object OapCache extends Logging {
   def detectPM(): Boolean = {
     val notFoundRegex = ".*not.*".r()
     val noAEPRegex = ".*No.*".r()
-    if(noAEPRegex.matches(detectAEPRes) || notFoundRegex.matches(detectAEPRes)) {
+    if(!noAEPRegex.findFirstIn(detectAEPRes).equals(None)||
+      !notFoundRegex.findFirstIn(detectAEPRes).equals(None)) {
       return false
     }
     true
