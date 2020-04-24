@@ -32,6 +32,6 @@ class OapCacheSuite extends SharedOapContext with Logging{
   test("detectPM") {
     assert(OapCache.detectPM() == false)
     // on machine with PM
-    // assert(OapCahce.detectPM() == true)
+    // assert(OapCache.detectPM() == true)
   }
 }
