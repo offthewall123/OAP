@@ -25,8 +25,6 @@ jobs:
       - cd ${TRAVIS_BUILD_DIR}
       - mvn clean -q -Ppersistent-memory -Pvmemcache test
     - name: oap-shuffle-remote-shuffle
-      install:
-      - #echo install step
       script:
       - cd ${TRAVIS_BUILD_DIR}/oap-shuffle/remote-shuffle
       - mvn -q test
