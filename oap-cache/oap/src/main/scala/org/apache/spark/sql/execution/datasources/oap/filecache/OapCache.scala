@@ -213,14 +213,19 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 }
 
 private[filecache] object OapCache extends Logging {
-  var detectAEPRes = "sudo ipmctl show -dimm".!!
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
   def detectPM(): Boolean = {
+    var detectAEPCmd = "sudo ipmctl show -dimm"
     val notFoundRegex = ".*not.*".r()
     val noAEPRegex = ".*No.*".r()
-    if(!noAEPRegex.findFirstIn(detectAEPRes).equals(None)||
-      !notFoundRegex.findFirstIn(detectAEPRes).equals(None)) {
-      return false
+    try {
+      val detectRes = detectAEPCmd.!!
+      if(!noAEPRegex.findFirstIn(detectRes).equals(None)||
+        !notFoundRegex.findFirstIn(detectRes).equals(None)) {
+        return false
+      }
+    } catch {
+      case e: Exception => return false
     }
     true
   }

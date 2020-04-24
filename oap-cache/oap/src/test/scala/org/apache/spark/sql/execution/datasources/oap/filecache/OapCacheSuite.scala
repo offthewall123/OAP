@@ -30,13 +30,8 @@ class OapCacheSuite extends SharedOapContext with Logging{
   override def afterAll(): Unit = super.afterAll()
 
   test("detectPM") {
-    val notFound = "Command 'ipmctl' not found."
-    val noDIMMs = "No DIMMs in the system."
-    OapCache.detectAEPRes = "sudo ipmctl show -dimm".!!
-    assert(OapCache.detectPM() == true)
-    OapCache.detectAEPRes = notFound
     assert(OapCache.detectPM() == false)
-    OapCache.detectAEPRes = noDIMMs
-    assert(OapCache.detectPM() == false)
+    // on machine with PM
+    // assert(OapCahce.detectPM() == true)
   }
 }
