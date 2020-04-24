@@ -7,7 +7,6 @@ jobs:
     #oap-cache-oap is a CI building demo of the corresponding module oap-cache/oap.
     - name: oap-cache-oap
       before_install:
-#      - sudo apt-get update
       - sudo apt-get install libpthread-stubs0-dev
       - sudo apt-get install libnuma-dev
       - sudo apt-get install cmake
