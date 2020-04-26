@@ -1,8 +1,7 @@
 #install arrow and plasms
 cd /tmp
-# TODO change to Intel-bigdata one
-git clone https://github.com/jikunshang/arrow-1.git
-cd arrow-1 && git checkout rebase_oap_master
+git clone https://github.com/Intel-bigdata/arrow.git
+cd arrow && git checkout oap-master
 cd cpp
 rm -rf release
 mkdir release
