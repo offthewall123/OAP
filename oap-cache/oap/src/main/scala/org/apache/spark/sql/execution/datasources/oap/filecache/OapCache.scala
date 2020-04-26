@@ -214,13 +214,13 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
 private[filecache] object OapCache extends Logging {
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
-  def detectPM(): Boolean = {
-    var detectAEPCmd = "sudo ipmctl show -dimm"
+  def detectPMem(): Boolean = {
+    val detectPmemCmd = "sudo ipmctl show -dimm"
     val notFoundRegex = ".*not.*".r()
-    val noAEPRegex = ".*No.*".r()
+    val noPmemRegex = ".*No.*".r()
     try {
-      val detectRes = detectAEPCmd.!!
-      if(!noAEPRegex.findFirstIn(detectRes).equals(None)||
+      val detectRes = detectPmemCmd.!!
+      if(!noPmemRegex.findFirstIn(detectRes).equals(None)||
         !notFoundRegex.findFirstIn(detectRes).equals(None)) {
         return false
       }
@@ -242,9 +242,9 @@ private[filecache] object OapCache extends Logging {
       configEntry.key,
       configEntry.defaultValue.get).toLowerCase
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
-      if (!detectPM()) {
-        logWarning(s"There is no Optane PMem DIMMs detected, " +
-          s"has to fall back to simple cache implementation" )
+      if (!detectPMem()) {
+        logWarning(s"There is no Optane PMem DIMMs detected," +
+          s"has to fall back to simple cache implementation")
         new SimpleOapCache()
       }
       else {
@@ -253,12 +253,14 @@ private[filecache] object OapCache extends Logging {
           case "vmem" => new VMemCache(fiberType)
           case "noevict" => new NonEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
           case "external" => new ExternalCache(fiberType)
+          case _ => throw new UnsupportedOperationException(
+            s"The cache backend: ${oapCacheOpt} is not supported now")
         }
       }
     }
     else {
-      logWarning(s"There is no Optane PMem DIMMs detected, " +
-        s"has to fall back to simple cache implementation" )
+      logWarning(s"There is no Optane PMem DIMMs detected," +
+        s"has to fall back to simple cache implementation")
       new SimpleOapCache()
     }
   }

@@ -30,7 +30,7 @@ class OapCacheSuite extends SharedOapContext with Logging{
   override def afterAll(): Unit = super.afterAll()
 
   test("detectPM") {
-    assert(OapCache.detectPM() == false)
+    assert(OapCache.detectPMem() == false)
     // on machine with PM
     // assert(OapCache.detectPM() == true)
   }
