@@ -104,10 +104,10 @@ private[sql] object MemoryManager extends Logging {
           logWarning(s"current spark.sql.oap.fiberCache.memory.manager: ${memoryManagerOpt} " +
             "takes no effect, use 'tmp' as memory manager for vmem cache instead.")
         }
-      case "nonevict" =>
+      case "noevict" =>
         if (!memoryManagerOpt.equals("hybrid")) {
           logWarning(s"current spark.sql.oap.fiberCache.memory.manager: ${memoryManagerOpt} " +
-            "takes no effect, use 'hybrid' as memory manager for nonevict cache instead.")
+            "takes no effect, use 'hybrid' as memory manager for noevict cache instead.")
         }
       case _ =>
         logInfo("current cache type may need further compatibility" +
@@ -144,7 +144,7 @@ private[sql] object MemoryManager extends Logging {
     checkConfCompatibility(cacheStrategyOpt, memoryManagerOpt)
     cacheStrategyOpt match {
       case "guava" => apply(sparkEnv, memoryManagerOpt)
-      case "nonevict" => new HybridMemoryManager(sparkEnv)
+      case "noevict" => new HybridMemoryManager(sparkEnv)
       case "vmem" => new TmpDramMemoryManager(sparkEnv)
       case "mix" =>
         if (!memoryManagerOpt.equals("mix")) {
