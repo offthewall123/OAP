@@ -214,8 +214,9 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
 private[filecache] object OapCache extends Logging {
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
-  def detectPMem(): Boolean = {
-    val detectPmemCmd = "sudo ipmctl show -dimm"
+  def detectPMem(test: Boolean = false): Boolean = {
+    if (test) return true
+    val detectPmemCmd = "ipmctl show -dimm"
     val notFoundRegex = ".*not.*".r()
     val noPmemRegex = ".*No.*".r()
     try {
