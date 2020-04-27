@@ -241,8 +241,13 @@ private[filecache] object OapCache extends Logging {
     val oapCacheOpt = conf.get(
       configEntry.key,
       configEntry.defaultValue.get).toLowerCase
+    val memoryManagerOpt =
+      conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
       if (!detectPMem()) {
+        if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
+          return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+        }
         logWarning(s"There is no Optane PMem DIMMs detected," +
           s"has to fall back to simple cache implementation")
         new SimpleOapCache()
@@ -259,8 +264,8 @@ private[filecache] object OapCache extends Logging {
       }
     }
     else {
-      logWarning(s"There is no Optane PMem DIMMs detected," +
-        s"has to fall back to simple cache implementation")
+      logWarning(s"PMemRelatedCacheBackend doesn't support," + oapCacheOpt +
+        s" has to fall back to simple cache implementation")
       new SimpleOapCache()
     }
   }
@@ -908,7 +913,12 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   val clientRoundRobin = new AtomicInteger(0)
   val plasmaClientPool = new Array[ plasma.PlasmaClient](clientPoolSize)
   for ( i <- 0 until clientPoolSize) {
-    plasmaClientPool(i) = new plasma.PlasmaClient(externalStoreCacheSocket, "", 0)
+    try {
+      plasmaClientPool(i) = new plasma.PlasmaClient(externalStoreCacheSocket, "", 0)
+    } catch {
+      case e: Exception =>
+        logError(s"Error occurred when connecting to plasma server" + e.getMessage)
+    }
   }
 
   val cacheGuardian = new MultiThreadCacheGuardian(Int.MaxValue)
