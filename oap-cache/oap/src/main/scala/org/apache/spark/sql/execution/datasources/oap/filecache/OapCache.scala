@@ -216,7 +216,7 @@ private[filecache] object OapCache extends Logging {
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
   def detectPMem(test: Boolean = false): Boolean = {
     if (test) return true
-    val detectPmemCmd = "sudo ipmctl show -dimm"
+    val detectPmemCmd = "ipmctl show -dimm"
     val notFoundRegex = ".*not.*".r()
     val noPmemRegex = ".*No.*".r()
     try {
@@ -237,7 +237,8 @@ private[filecache] object OapCache extends Logging {
   }
 
   def apply(sparkEnv: SparkEnv, configEntry: ConfigEntry[String],
-            cacheMemory: Long, cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
+            cacheMemory: Long, cacheGuardianMemory: Long, fiberType: FiberType,
+           test: Boolean = false): OapCache = {
     val conf = sparkEnv.conf
     val oapCacheOpt = conf.get(
       configEntry.key,
@@ -245,7 +246,7 @@ private[filecache] object OapCache extends Logging {
     val memoryManagerOpt =
       conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
-      if (!detectPMem()) {
+      if (!detectPMem(test)) {
         if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
           return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
         }
