@@ -44,6 +44,8 @@ import org.apache.spark.util.Utils
 
 private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends CacheGuardian(maxMemory)
   with Logging {
+
+  // xdy test1
    //  test message1
   // test message2
   // test message 3
