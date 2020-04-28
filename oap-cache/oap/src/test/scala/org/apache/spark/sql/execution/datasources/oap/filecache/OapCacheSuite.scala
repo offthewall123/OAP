@@ -44,7 +44,7 @@ class OapCacheSuite extends SharedOapContext with Logging{
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "offheap")
-    val cacheMemory: Long = 10000
+    val cacheMemory: Long = 100000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
     val guavaCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
