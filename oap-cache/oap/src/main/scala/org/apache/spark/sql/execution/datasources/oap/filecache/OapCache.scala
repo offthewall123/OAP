@@ -306,19 +306,29 @@ class NoEvictPMCache(pmSize: Long,
   private val cacheHitCount: AtomicLong = new AtomicLong(0)
   private val cacheMissCount: AtomicLong = new AtomicLong(0)
 
+  // key-value
+  // fiberid - fibercache
   val cacheMap : ConcurrentHashMap[FiberId, FiberCache] = new ConcurrentHashMap[FiberId, FiberCache]
+
+  // cacheguardian is used to free memory
   cacheGuardian.start()
 
   override def get(fiber: FiberId): FiberCache = {
     if (cacheMap.containsKey(fiber)) {
       cacheHitCount.getAndAdd(1)
       val fiberCache = cacheMap.get(fiber)
+      //refcount +1
       fiberCache.occupy()
       fiberCache
     } else {
+      // if miss
       cacheMissCount.getAndAdd(1)
+      // cache it
       val fiberCache = cache(fiber)
+      // refcount+1
       fiberCache.occupy()
+      // if this fiber use dram
+      // addremovalfiber
       if (fiberCache.fiberData.source.equals(SourceEnum.DRAM)) {
         cacheGuardian.addRemovalFiber(fiber, fiberCache)
       } else {
