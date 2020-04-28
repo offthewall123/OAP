@@ -29,6 +29,17 @@ class OapCacheSuite extends SharedOapContext with Logging{
 
   override def afterAll(): Unit = super.afterAll()
 
+  test("detectPM not_support cache") {
+    val sparkenv = SparkEnv.get
+    sparkenv.conf.set("spark.oap.cache.strategy", "not_support_cache")
+    sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "offheap")
+    val cacheMemory: Long = 10000
+    val cacheGuardianMemory: Long = 20000
+    val fiberType: FiberType = FiberType.DATA
+    val simpleOapCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
+    assert(simpleOapCache.isInstanceOf[SimpleOapCache])
+  }
+
   test("detectPM guava cache offheap memory manager") {
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
@@ -63,19 +74,6 @@ class OapCacheSuite extends SharedOapContext with Logging{
     assert(guavaCache.isInstanceOf[GuavaOapCache])
   }
 
-  test("detectPM vmem cache pm memory manager") {
-    val sparkenv = SparkEnv.get
-    val cacheMemory: Long = 10000
-    val cacheGuardianMemory: Long = 20000
-    val fiberType: FiberType = FiberType.DATA
-    sparkenv.conf.set("spark.oap.cache.strategy", "vmem")
-    sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    val vmemCache: OapCache = OapCache(sparkenv, OapConf.OAP_FIBERCACHE_STRATEGY,
-      cacheMemory, cacheGuardianMemory, fiberType)
-    assert(vmemCache.isInstanceOf[VMemCache])
-  }
-
   test("detectPM noevict cache pm memory manager") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
@@ -87,18 +85,5 @@ class OapCacheSuite extends SharedOapContext with Logging{
     val noevictCache: OapCache = OapCache(sparkenv, OapConf.OAP_FIBERCACHE_STRATEGY,
       cacheMemory, cacheGuardianMemory, fiberType)
     assert(noevictCache.isInstanceOf[NoEvictPMCache])
-  }
-
-  test("detectPM external cache pm memory manager") {
-    val sparkenv = SparkEnv.get
-    val cacheMemory: Long = 10000
-    val cacheGuardianMemory: Long = 20000
-    val fiberType: FiberType = FiberType.DATA
-    sparkenv.conf.set("spark.oap.cache.strategy", "external")
-    sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    val externalCache: OapCache = OapCache(sparkenv, OapConf.OAP_FIBERCACHE_STRATEGY,
-      cacheMemory, cacheGuardianMemory, fiberType)
-    assert(externalCache.isInstanceOf[ExternalCache])
   }
 }
