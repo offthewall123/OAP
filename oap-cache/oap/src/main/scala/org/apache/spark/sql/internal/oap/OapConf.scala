@@ -505,4 +505,12 @@ object OapConf {
       .doc("To indicate if enable parquet binary data cache, defalt false")
       .booleanConf
       .createWithDefault(false)
+
+  val OAP_DETECT_PMEM_ENABLED = {
+    SqlConfAdapter.buildConf("spark.oap.detectPmem.enabled")
+      .internal()
+      .doc("To detect if there have Optane PMem DIMMs")
+      .booleanConf
+      .createWithDefault(true)
+  }
 }
