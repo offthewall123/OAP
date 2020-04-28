@@ -258,7 +258,7 @@ private[filecache] object OapCache extends Logging {
         oapCacheOpt match {
           case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
           case "vmem" => new VMemCache(fiberType)
-          case "noevict" => new NonEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
+          case "noevict" => new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
           case "external" => new ExternalCache(fiberType)
           case _ => throw new UnsupportedOperationException(
             s"The cache backend: ${oapCacheOpt} is not supported now")

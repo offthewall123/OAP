@@ -74,7 +74,7 @@ class OapCacheSuite extends SharedOapContext with Logging{
     sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
     val noevictCache: OapCache = OapCache(sparkenv, OapConf.OAP_FIBERCACHE_STRATEGY,
       cacheMemory, cacheGuardianMemory, fiberType)
-    assert(noevictCache.isInstanceOf[NonEvictPMCache])
+    assert(noevictCache.isInstanceOf[NoEvictPMCache])
   }
 
   test("detectPM external cache pm memory manager") {
