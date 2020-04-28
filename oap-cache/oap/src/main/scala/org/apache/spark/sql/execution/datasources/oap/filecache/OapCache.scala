@@ -848,11 +848,13 @@ class MixCache(dataCacheMemory: Long,
 
 class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private val conf = SparkEnv.get.conf
+  // store socket file
   private val externalStoreCacheSocket: String = "/tmp/plasmaStore"
   private var cacheInit: Boolean = false
   def init(): Unit = {
     if (!cacheInit) {
       try {
+        // load plasa client first
         System.loadLibrary("plasma_java")
         cacheInit = true
       } catch {
@@ -870,17 +872,24 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private var cacheEvictCount: AtomicLong = new AtomicLong(0)
   private var cacheTotalSize: AtomicLong = new AtomicLong(0)
 
+  // allocate empty fiberCache according to fiberLength
   private def emptyDataFiber(fiberLength: Long): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 
+  // fiberIdSet
   var fiberSet = scala.collection.mutable.Set[FiberId]()
+  // plasma client pool
   val clientPoolSize = conf.get(OapConf.OAP_EXTERNAL_CACHE_CLIENT_POOL_SIZE)
+  // ?
   val clientRoundRobin = new AtomicInteger(0)
+  // Array plasma pool
   val plasmaClientPool = new Array[ plasma.PlasmaClient](clientPoolSize)
   for ( i <- 0 until clientPoolSize) {
+    // new plasmaClient
     plasmaClientPool(i) = new plasma.PlasmaClient(externalStoreCacheSocket, "", 0)
   }
 
+  // cacheGuardian is used to release cache
   val cacheGuardian = new MultiThreadCacheGuardian(Int.MaxValue)
   cacheGuardian.start()
 
@@ -896,6 +905,8 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     hash(key.getBytes())
   }
 
+  // plasma store is key-value
+  // get and delete object according to fiberId
   def delete(fiberId: FiberId): Unit = {
     val objectId = hash(fiberId.toString)
     plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).delete(objectId)
@@ -915,33 +926,45 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       try{
         logDebug(s"Cache hit, get from external cache.")
         val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+        // get object as bytebuffer from object store
         val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
         cacheHitCount.addAndGet(1)
+        // apply fibercache according to buffer's size
         fiberCache = emptyDataFiber(buf.capacity())
         fiberCache.fiberId = fiberId
         Platform.copyMemory(null, buf.asInstanceOf[DirectBuffer].address(),
           null, fiberCache.fiberData.baseOffset, buf.capacity())
+
+        // Why release objectId?
         plasmaClient.release(objectId)
       }
       catch {
         case getException : plasma.exceptions.PlasmaGetException =>
           logWarning("Get exception: " + getException.getMessage)
+          // Why cache fiberId
           fiberCache = cache(fiberId)
           cacheMissCount.addAndGet(1)
       }
+      // this fiber's refcount +1
       fiberCache.occupy()
+      // cacheGuardian addRemovalFiber
       cacheGuardian.addRemovalFiber(fiberId, fiberCache)
       fiberCache
     } else {
+      // if miss ,put the fiber to plasma store
       val fiberCache = cache(fiberId)
       cacheMissCount.addAndGet(1)
+      // add fiberId
       fiberSet.add(fiberId)
+      // refcount+1
       fiberCache.occupy()
+      // add removalFiber
       cacheGuardian.addRemovalFiber(fiberId, fiberCache)
       fiberCache
     }
   }
 
+  // put a fiber into plasma store
   override def cache(fiberId: FiberId): FiberCache = {
     val fiber = super.cache(fiberId)
     fiber.fiberId = fiberId
@@ -950,10 +973,14 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     if( !contains(fiberId)) {
       val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
       try {
+        // create an object
         val buf = plasmaClient.create(objectId, fiber.size().toInt)
+        // copy memory to plasma store
         Platform.copyMemory(null, fiber.fiberData.baseOffset,
           null, buf.asInstanceOf[DirectBuffer].address(), fiber.size())
+        // seal
         plasmaClient.seal(objectId)
+        // why release objectId
         plasmaClient.release(objectId)
       } catch {
         case e: DuplicateObjectException => logWarning(e.getMessage)
