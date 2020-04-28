@@ -51,6 +51,18 @@ class OapCacheSuite extends SharedOapContext with Logging{
     assert(simpleOapCache.isInstanceOf[SimpleOapCache])
   }
 
+  test("detectPM guava cache pm memory manager detectPM()return true") {
+    val sparkenv = SparkEnv.get
+    val cacheMemory: Long = 10000
+    val cacheGuardianMemory: Long = 20000
+    val fiberType: FiberType = FiberType.DATA
+    sparkenv.conf.set("spark.oap.cache.strategy", "guava")
+    sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
+    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
+    val guavaCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
+    assert(guavaCache.isInstanceOf[GuavaOapCache])
+  }
+
   test("detectPM vmem cache pm memory manager") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
