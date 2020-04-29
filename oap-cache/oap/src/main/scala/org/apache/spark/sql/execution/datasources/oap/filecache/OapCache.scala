@@ -127,6 +127,7 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
   protected val _pendingFiberSize: AtomicLong = new AtomicLong(0)
   protected val _pendingFiberCapacity: AtomicLong = new AtomicLong(0)
 
+  // the fibercache that can be removed
   private val removalPendingQueue = new LinkedBlockingQueue[(FiberId, FiberCache)]()
 
   private val guardianLock = new ReentrantLock()
@@ -149,6 +150,9 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
     guardianLockCond
   }
 
+  // why? bRemoving means it's not removed now
+  // thread.run will take one element from pending queue
+  // then set bRemoving = true
   def pendingFiberCount: Int = if (bRemoving) {
     removalPendingQueue.size() + 1
   } else {
@@ -157,12 +161,14 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
   def pendingFiberSize: Long = _pendingFiberSize.get()
 
+  // real used memory
   def pendingFiberOccupiedSize: Long = _pendingFiberCapacity.get()
 
   def addRemovalFiber(fiber: FiberId, fiberCache: FiberCache): Unit = {
     _pendingFiberSize.addAndGet(fiberCache.size())
     // Record the occupied size
     _pendingFiberCapacity.addAndGet(fiberCache.getOccupiedSize())
+    // put it in queue
     removalPendingQueue.offer((fiber, fiberCache))
     if (_pendingFiberCapacity.get() > maxMemory) {
       logWarning("Fibers pending on removal use too much memory, " +
@@ -172,30 +178,43 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
   override def run(): Unit = {
     while (true) {
+      // dead loop to remove elements in removalPendingQueue
+      // take 1 (FiberId,Fibercache) _2 means take the second element in the tuple
       val fiberCache = removalPendingQueue.take()._2
+      // why dont pass FiberID?
       releaseFiberCache(fiberCache)
     }
   }
 
   private def releaseFiberCache(cache: FiberCache): Unit = {
+    // Thread is moving the cache
     bRemoving = true
+    // getFiberId
     val fiberId = cache.fiberId
     logDebug(s"Removing fiber: $fiberId")
     // Block if fiber is in use.
     if (!cache.tryDispose()) {
       logDebug(s"Waiting fiber to be released timeout. Fiber: $fiberId")
+      // put this fiber back to pendingQueue
       removalPendingQueue.offer((fiberId, cache))
+      // too much memory
       if (_pendingFiberCapacity.get() > maxMemory) {
         logWarning("Fibers pending on removal use too much memory, " +
             s"current: ${_pendingFiberCapacity.get()}, max: $maxMemory")
       }
     } else {
+      // pendingFiberSize - cache.size()
       _pendingFiberSize.addAndGet(-cache.size())
 
       // TODO: Make log more readable
       logDebug(s"Fiber removed successfully. Fiber: $fiberId")
+
+
+      // thread Lock used here?
       if (waitNotifyActive) {
         this.getGuardianLock().lock()
+        // pendingFiberCapacity - cache.getOccupiedSize
+        // use lock why use AtomicLong?
         _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
         if (_pendingFiberCapacity.get() <
           OapRuntime.getOrCreate.fiberCacheManager.dcpmmWaitingThreshold) {
@@ -203,6 +222,7 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
         }
         this.getGuardianLock().unlock()
       } else {
+        // waitNotifyActive = false
         _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
       }
     }
