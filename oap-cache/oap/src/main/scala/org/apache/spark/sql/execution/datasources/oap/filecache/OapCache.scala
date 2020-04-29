@@ -945,7 +945,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         Platform.copyMemory(null, buf.asInstanceOf[DirectBuffer].address(),
           null, fiberCache.fiberData.baseOffset, buf.capacity())
 
-        // Why release objectId?
+        // objectid reference -1
         plasmaClient.release(objectId)
       }
       catch {
