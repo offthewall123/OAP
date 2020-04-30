@@ -73,9 +73,14 @@ case class BinaryDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) 
     assert(input != null && offset >= 0 && length > 0,
       "Illegal condition when load binary Fiber to cache.")
     val data = new Array[Byte](length)
+
     input.seek(offset)
+
     input.readFully(data)
+
+    // cache will call this method to get an empty fiberCache area first
     val fiber = OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(length)
+    // then use Platform.copyMemory to copy data
     Platform.copyMemory(data,
       Platform.BYTE_ARRAY_OFFSET, null, fiber.getBaseOffset, length)
     fiber

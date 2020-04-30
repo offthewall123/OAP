@@ -294,7 +294,11 @@ trait OapCache {
     indexFiberCount.set(0L)
   }
 
+  // FiberId is an abstract class
+  // it has different implements, can identify fiber's type according to FiberId
+  // BinaryDataFiberId,OrcBinaryFiberId,VectorDataFiberId,DataFiberId,BTreeFiberId,BitmapFiberId
   def incFiberCountAndSize(fiber: FiberId, count: Long, size: Long): Unit = {
+    // indexFiber or data Fiber
     if (fiber.isInstanceOf[DataFiberId] || fiber.isInstanceOf[TestDataFiberId]) {
       dataFiberCount.addAndGet(count)
       dataFiberSize.addAndGet(size)
@@ -302,6 +306,7 @@ trait OapCache {
       fiber.isInstanceOf[BTreeFiberId] ||
       fiber.isInstanceOf[BitmapFiberId] ||
       fiber.isInstanceOf[TestIndexFiberId]) {
+      // BTree,Bitmap,TestIndex is all index type fiber
       indexFiberCount.addAndGet(count)
       indexFiberSize.addAndGet(size)
     }
@@ -311,8 +316,11 @@ trait OapCache {
     incFiberCountAndSize(fiber, -count, -size)
 
   protected def cache(fiber: FiberId): FiberCache = {
+    // match according to FiberId's type
     val cache = fiber match {
+        // no binary?
       case binary: BinaryDataFiberId => binary.doCache()
+        // no orcChunk?
       case orcChunk: OrcBinaryFiberId => orcChunk.doCache()
         // cache (rowGroupId columnIndex)
       case VectorDataFiberId(file, columnIndex, rowGroupId) => file.cache(rowGroupId, columnIndex)
