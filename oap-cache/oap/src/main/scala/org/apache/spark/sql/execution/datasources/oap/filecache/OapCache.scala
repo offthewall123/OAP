@@ -54,12 +54,18 @@ private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends Cache
   } else {
     OapConf.OAP_CACHE_GUARDIAN_FREE_THREAD_NUM.defaultValue.get
   }
+
+  // Array[LinkedBlockingQueue[(FiberId, FiberCache)]]
   private val removalPendingQueues =
     new Array[LinkedBlockingQueue[(FiberId, FiberCache)]](freeThreadNum)
+
+  // multiple LinkedBlockingQueue
+  // every thread will watch one queue
   for ( i <- 0 until freeThreadNum)
     removalPendingQueues(i) = new LinkedBlockingQueue[(FiberId, FiberCache)]()
   val roundRobin = new AtomicInteger(0)
 
+  // go through the array
   override def pendingFiberCount: Int = {
     var sum = 0
     removalPendingQueues.foreach(sum += _.size())
@@ -70,8 +76,11 @@ private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends Cache
     _pendingFiberSize.addAndGet(fiberCache.size())
     // Record the occupied size
     _pendingFiberCapacity.addAndGet(fiberCache.getOccupiedSize())
+
+    // it's Array[LinkedBlockingQueue[(FiberId, FiberCache)]]
     removalPendingQueues(roundRobin.addAndGet(1) % freeThreadNum)
       .offer((fiber, fiberCache))
+
     if (_pendingFiberCapacity.get() > maxMemory) {
       // TODO:change back logWarning
       logDebug("Fibers pending on removal use too much memory, " +
@@ -79,11 +88,13 @@ private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends Cache
     }
   }
 
+  // fixed size threadpool
   lazy val freeThreadPool = Executors.newFixedThreadPool(freeThreadNum)
 
 
   override def start(): Unit = {
     for (i <- 0 until freeThreadNum)
+      // everyThread will watch one queue
       freeThreadPool.execute(new freeThread(i))
 
     class freeThread(id: Int) extends Runnable {
@@ -530,8 +541,12 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
       val length = res
       val fiberCache = emptyDataFiber(length)
       val startTime = System.currentTimeMillis()
+
+      // get pm data to offheap Dram region
+      // put it into the empty fiber
       val get = VMEMCacheJNI.getNative(fiberKey.getBytes(), null,
         0, fiberKey.length, fiberCache.getBaseOffset, 0, fiberCache.size().toInt)
+
       logDebug(s"second getNative require ${length} bytes. " +
         s"returns $get bytes, takes ${System.currentTimeMillis() - startTime} ms")
       fiberCache.fiberId = fiber
