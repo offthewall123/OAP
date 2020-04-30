@@ -33,6 +33,8 @@ private[oap] abstract class FiberId {
 case class BinaryDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) extends
   DataFiberId {
 
+  // SeekableInputStream
+  // is an interface with the methods needed by Parquet to read data from a file or Hadoop data stream.
   private var input: SeekableInputStream = _
   private var offset: Long = _
   private var length: Int = _

@@ -92,6 +92,8 @@ private[oap] case class ParquetDataFile(
     inUseFiberCache.indices.foreach(release)
   }
 
+  // cache data from disk
+  // return a FiberCache
   def cache(groupId: Int, fiberId: Int): FiberCache = {
     if (fiberDataReader == null) {
       fiberDataReader =
@@ -102,6 +104,8 @@ private[oap] case class ParquetDataFile(
     // setting required column to conf enables us to
     // Vectorized read & cache certain(not all) columns
     addRequestSchemaToConf(conf, Array(fiberId))
+    // cache data from hdfs
+    // loadSingleColumn
     ParquetFiberDataLoader(conf, fiberDataReader, groupId).loadSingleColumn
   }
 

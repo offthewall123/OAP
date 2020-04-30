@@ -42,6 +42,7 @@ import org.apache.spark.unsafe.Platform
 object ParquetDataFiberWriter extends Logging {
 
   def dumpToCache(column: OnHeapColumnVector, total: Int): FiberCache = {
+    // construct parquetDateFiberHeader
     val header = ParquetDataFiberHeader(column, total)
     logDebug(s"will dump column to data fiber dataType = ${column.dataType()}, " +
       s"total = $total, header is $header")
@@ -49,9 +50,15 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(true, false, 0) =>
         val length = fiberLength(column, total, 0 )
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
+
+        // get an emptyDataFiber
         val fiber = emptyDataFiber(length)
+        // write
         if (!fiber.isFailedMemoryBlock()) {
+          // write to cache according to offset
           val nativeAddress = header.writeToCache(fiber.getBaseOffset)
+          // dumpDataToFiber will actually write data
+          // will call PlatForm.copyMemory
           dumpDataToFiber(nativeAddress, column, total)
         } else {
           fiber.setColumn(column)
@@ -306,6 +313,7 @@ object ParquetDataFiberWriter extends Logging {
   }
 
   private def emptyDataFiber(fiberLength: Long): FiberCache =
+    // getEmptyFiberCache
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 }
 
@@ -790,6 +798,7 @@ case class BinaryDictionary(dictionaryContent: Array[Binary])
  * @param allNulls status represent all value are null in this data fiber.
  * @param dicLength dictionary length of this data fiber, if 0 represent there is no dictionary.
  */
+// dicLength?
 case class ParquetDataFiberHeader(noNulls: Boolean, allNulls: Boolean, dicLength: Int) {
 
   /**

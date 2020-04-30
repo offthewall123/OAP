@@ -45,17 +45,28 @@ private[oap] case class ParquetFiberDataLoader(
 
   @throws[IOException]
   def loadSingleColumn: FiberCache = {
+    // ParquetMetadata footer
     val footer = reader.getFooter
+    // get parquet schema
     val fileSchema = footer.getFileMetaData.getSchema
+    // get fileMetaData
     val fileMetadata = footer.getFileMetaData.getKeyValueMetaData
+    // what's readContext used for?
     val readContext = new ParquetReadSupportWrapper()
       .init(new InitContext(configuration, Collections3.toSetMultiMap(fileMetadata), fileSchema))
+    // two schema which one is needed?
     val requestedSchema = readContext.getRequestedSchema
+    // what's use of this
     val sparkRequestedSchemaString =
       configuration.get(ParquetReadSupportWrapper.SPARK_ROW_REQUESTED_SCHEMA)
+
+
+    // ?
     val sparkSchema = StructType.fromString(sparkRequestedSchemaString)
+    // load one column once
     assert(sparkSchema.length == 1, s"Only can get single column every time " +
       s"by loadSingleColumn, the columns = ${sparkSchema.mkString}")
+
     val dataType = sparkSchema.fields(0).dataType
     // Notes: rowIds is IntegerType in oap index.
     val rowCount = reader.getFooter.getBlocks.get(blockId).getRowCount.toInt
@@ -64,7 +75,11 @@ private[oap] case class ParquetFiberDataLoader(
     val columnDescriptor = requestedSchema.getColumns.get(0)
     val originalType = requestedSchema.asGroupType.getFields.get(0).getOriginalType
     val blockMetaData = footer.getBlocks.get(blockId)
+
+    // read fiberData from block
     val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+
+    // vectorizedVolumnReader
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, originalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -74,7 +89,9 @@ private[oap] case class ParquetFiberDataLoader(
         columnReader, rowCount, dataType)
     } else {
       val column = new OnHeapColumnVector(rowCount, dataType)
+      // read column
       columnReader.readBatch(rowCount, column)
+      // write OnHeapColumnVector to Data fiber
       ParquetDataFiberWriter.dumpToCache(
         column.asInstanceOf[OnHeapColumnVector], rowCount)
     }

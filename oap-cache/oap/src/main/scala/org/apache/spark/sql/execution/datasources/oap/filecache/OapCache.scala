@@ -179,7 +179,7 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
   override def run(): Unit = {
     while (true) {
       // dead loop to remove elements in removalPendingQueue
-      // take 1 (FiberId,Fibercache) _2 means take the second element in the tuple
+      // take 1 (FiberId,Fibercache)tuple _2 means take the second element in the tuple
       val fiberCache = removalPendingQueue.take()._2
       // why dont pass FiberID?
       releaseFiberCache(fiberCache)
@@ -303,6 +303,7 @@ trait OapCache {
     val cache = fiber match {
       case binary: BinaryDataFiberId => binary.doCache()
       case orcChunk: OrcBinaryFiberId => orcChunk.doCache()
+        // cache (rowGroupId columnIndex)
       case VectorDataFiberId(file, columnIndex, rowGroupId) => file.cache(rowGroupId, columnIndex)
       case BTreeFiberId(getFiberData, _, _, _) => getFiberData.apply()
       case BitmapFiberId(getFiberData, _, _, _) => getFiberData.apply()
@@ -350,6 +351,7 @@ class NoEvictPMCache(pmSize: Long,
       // if this fiber use dram
       // addremovalfiber
       if (fiberCache.fiberData.source.equals(SourceEnum.DRAM)) {
+        // cacheGuardian is used to release cache in Dram
         cacheGuardian.addRemovalFiber(fiber, fiberCache)
       } else {
         _cacheSize.addAndGet(fiberCache.size())

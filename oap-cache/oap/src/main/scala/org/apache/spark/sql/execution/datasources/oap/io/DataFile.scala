@@ -46,7 +46,12 @@ abstract class DataFile {
   def totalRows(): Long
 
   def getDataFileMeta(): DataFileMeta
+
+
+  // orc cache parquet cache
   def cache(groupId: Int, fiberId: Int): FiberCache
+
+
   override def hashCode(): Int = path.hashCode
   override def equals(other: Any): Boolean = other match {
     case df: DataFile => path.equals(df.path)
