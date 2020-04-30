@@ -322,8 +322,14 @@ trait OapCache {
       case binary: BinaryDataFiberId => binary.doCache()
         // no orcChunk?
       case orcChunk: OrcBinaryFiberId => orcChunk.doCache()
-        // cache (rowGroupId columnIndex)
+
+      // private[oap] abstract class DataFiberId extends FiberId {
+      //  def file: DataFile
+      //  def columnIndex: Int
+      //  def rowGroupId: Int}
       case VectorDataFiberId(file, columnIndex, rowGroupId) => file.cache(rowGroupId, columnIndex)
+
+
       case BTreeFiberId(getFiberData, _, _, _) => getFiberData.apply()
       case BitmapFiberId(getFiberData, _, _, _) => getFiberData.apply()
       case TestDataFiberId(getFiberData, _) => getFiberData.apply()
@@ -479,6 +485,7 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
   private var cacheEvictCount: Long = 0
   private var cacheTotalSize: Long = 0
   // We don't bother the memory use of Simple Cache
+  // why Int.MaxValue here?
   private val cacheGuardian = new MultiThreadCacheGuardian(Int.MaxValue)
   cacheGuardian.start()
 
@@ -500,6 +507,7 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
           val conf = sparkEnv.conf
           // The NUMA id should be set when the executor process start up. However, Spark don't
           // support NUMA binding currently.
+          // ???
           var numaId = conf.getInt("spark.executor.numa.id", -1)
           val executorId = sparkEnv.executorId.toInt
           val map = PersistentMemoryConfigUtils.parseConfig(conf)
@@ -511,6 +519,8 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
             numaId = executorId % PersistentMemoryConfigUtils.totalNumaNode(conf)
           }
           val initialPath = map.get(numaId).get
+
+          // vmemcache is a path
           val fullPath = Utils.createTempDir(initialPath + File.separator + executorId)
 
           require(fullPath.isDirectory(), "VMEMCache initialize path must be a directory")
@@ -532,11 +542,19 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
   override def get(fiber: FiberId): FiberCache = {
     val fiberKey = fiber.toFiberKey()
     val startTime = System.currentTimeMillis()
+
+
+    // call vmemcachejni if this fiber exists on pm
     val res = VMEMCacheJNI.exist(fiberKey.getBytes(), null, 0, fiberKey.getBytes().length)
+
     logDebug(s"vmemcache.exist return $res ," +
       s" takes ${System.currentTimeMillis() - startTime} ms")
+
+
     if (res <= 0) {
       cacheMissCount.addAndGet(1)
+      // cache to where
+      // if miss will get this fiber data from pm or disk, and cache it in dram
       val fiberCache = cache(fiber)
       fiberSet.add(fiber)
       incFiberCountAndSize(fiber, 1, fiberCache.size())
@@ -589,10 +607,15 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
   override def cacheSize: Long = 0
 
   override def cache(fiberId: FiberId): FiberCache = {
+      // cache it to Dram?
     val fiber = super.cache(fiberId)
+
+
+    // put offheap fiber to pm
     VMEMCacheJNI.putNative(fiberId.toFiberKey().getBytes(), null, 0,
       fiberId.toFiberKey().length, fiber.getBaseOffset,
       0, fiber.getOccupiedSize().toInt)
+
     fiber
   }
 

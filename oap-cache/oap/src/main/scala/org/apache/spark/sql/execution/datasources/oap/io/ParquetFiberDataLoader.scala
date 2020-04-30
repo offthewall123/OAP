@@ -49,11 +49,14 @@ private[oap] case class ParquetFiberDataLoader(
     val footer = reader.getFooter
     // get parquet schema
     val fileSchema = footer.getFileMetaData.getSchema
+
     // get fileMetaData
     val fileMetadata = footer.getFileMetaData.getKeyValueMetaData
     // what's readContext used for?
     val readContext = new ParquetReadSupportWrapper()
       .init(new InitContext(configuration, Collections3.toSetMultiMap(fileMetadata), fileSchema))
+
+
     // two schema which one is needed?
     val requestedSchema = readContext.getRequestedSchema
     // what's use of this
@@ -91,6 +94,7 @@ private[oap] case class ParquetFiberDataLoader(
       val column = new OnHeapColumnVector(rowCount, dataType)
       // read column
       columnReader.readBatch(rowCount, column)
+
       // write OnHeapColumnVector to Data fiber
       ParquetDataFiberWriter.dumpToCache(
         column.asInstanceOf[OnHeapColumnVector], rowCount)
