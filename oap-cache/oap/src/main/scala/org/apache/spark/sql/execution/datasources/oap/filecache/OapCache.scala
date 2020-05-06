@@ -214,9 +214,9 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
 private[filecache] object OapCache extends Logging {
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
-  def detectPMem(test: Boolean = true, noDetectRes: Boolean = true): Boolean = {
-    if (test == false && noDetectRes == true) return true
-    if (test == false && noDetectRes == false) return false
+  def detectPMem(detectEnabled: Boolean = true, testDetectPmemRes: Boolean = true): Boolean = {
+    if (detectEnabled == false && testDetectPmemRes == true) return true
+    if (detectEnabled == false && testDetectPmemRes == false) return false
     val detectPmemCmd = "sudo ipmctl show -dimm"
     val notFoundRegex = ".*not.*".r()
     val noPmemRegex = ".*No.*".r()
@@ -245,10 +245,10 @@ private[filecache] object OapCache extends Logging {
       configEntry.defaultValue.get).toLowerCase
     val memoryManagerOpt =
       conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
-    val detect = conf.get(OapConf.OAP_DETECT_PMEM_ENABLED.key, "true").toLowerCase
-    val noDetectRes = conf.get(OapConf.OAP_NO_DETECT_RES.key, "true").toLowerCase
+    val detectEnabled = conf.get(OapConf.OAP_DETECT_PMEM_ENABLED.key, "true").toLowerCase
+    val testDetectPmemRes = conf.get(OapConf.OAP_TEST_DETECTPMEM_RES.key, "true").toLowerCase
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
-      if (!detectPMem(detect.toBoolean, noDetectRes.toBoolean)) {
+      if (!detectPMem(detectEnabled.toBoolean, testDetectPmemRes.toBoolean)) {
         if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
           return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
         }

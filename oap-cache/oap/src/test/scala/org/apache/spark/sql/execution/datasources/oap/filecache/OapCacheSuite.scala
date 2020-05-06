@@ -29,12 +29,12 @@ class OapCacheSuite extends SharedOapContext with Logging{
 
   override def afterAll(): Unit = super.afterAll()
 
-  test("detectPM not_support cache") {
+  test("not support cache strategy  -- throw exception") {
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "not_support_cache")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "offheap")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    sparkenv.conf.set("spark.oap.nodetect_res", "false")
+    sparkenv.conf.set("spark.oap.detectPMem.enabled", "false")
+    sparkenv.conf.set("spark.oap.test.detectPMem.res", "false")
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
@@ -43,12 +43,12 @@ class OapCacheSuite extends SharedOapContext with Logging{
     }
   }
 
-  test("detectPM guava cache offheap memory manager") {
+  test("guava cache strategy and offheap memory manager -- return guavaCache") {
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "offheap")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    sparkenv.conf.set("spark.oap.nodetect_res", "false")
+    sparkenv.conf.set("spark.oap.detectPMem.enabled", "false")
+    sparkenv.conf.set("spark.oap.test.detectPMem.res", "false")
     val cacheMemory: Long = 100000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
@@ -56,41 +56,54 @@ class OapCacheSuite extends SharedOapContext with Logging{
     assert(guavaCache.isInstanceOf[GuavaOapCache])
   }
 
-  test("detectPM guava simple cache") {
+  test("guava cache strategy and pm memory manager (without Optane PMem) -- fall back to simpleCache") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    sparkenv.conf.set("spark.oap.nodetect_res", "false")
+    sparkenv.conf.set("spark.oap.detectPMem.enabled", "false")
+    sparkenv.conf.set("spark.oap.test.detectPMem.res", "false")
     val simpleOapCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
     assert(simpleOapCache.isInstanceOf[SimpleOapCache])
   }
 
-  test("detectPM guava cache pm memory manager detectPM()return true") {
+  test("noevict cache strategy and pm memory manager (without Optane PMem) -- fallback to simpleCache") {
+    val sparkenv = SparkEnv.get
+    sparkenv.conf.set("spark.oap.cache.strategy", "noevict")
+    sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
+    sparkenv.conf.set("spark.oap.detectPMem.enabled", "false")
+    sparkenv.conf.set("spark.oap.test.detectPMem.res", "false")
+    val cacheMemory: Long = 100000
+    val cacheGuardianMemory: Long = 20000
+    val fiberType: FiberType = FiberType.DATA
+    val simpleCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
+    assert(simpleCache.isInstanceOf[SimpleOapCache])
+  }
+
+  test("guava cache strategy and pm memory manager (with Optane PMem) return guavaCache") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    sparkenv.conf.set("spark.oap.nodetect_res", "true")
+    sparkenv.conf.set("spark.oap.detectPMem.enabled", "false")
+    sparkenv.conf.set("spark.oap.test.detectPMem.res", "true")
     val guavaCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
     assert(guavaCache.isInstanceOf[GuavaOapCache])
   }
 
-  test("detectPM noevict cache pm memory manager") {
+  test("noevict cache strategy and pm memory manager (with Optane PMem) return noevictCache") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
     sparkenv.conf.set("spark.oap.cache.strategy", "noevict")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
-    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
-    sparkenv.conf.set("spark.oap.nodetect_res", "true")
+    sparkenv.conf.set("spark.oap.detectPMem.enabled", "false")
+    sparkenv.conf.set("spark.oap.test.detectPMem.res", "true")
     val noevictCache: OapCache = OapCache(sparkenv, OapConf.OAP_FIBERCACHE_STRATEGY,
       cacheMemory, cacheGuardianMemory, fiberType)
     assert(noevictCache.isInstanceOf[NoEvictPMCache])

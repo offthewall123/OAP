@@ -507,17 +507,17 @@ object OapConf {
       .createWithDefault(false)
 
   val OAP_DETECT_PMEM_ENABLED = {
-    SqlConfAdapter.buildConf("spark.oap.detectPmem.enabled")
+    SqlConfAdapter.buildConf("spark.oap.detectPMem.enabled")
       .internal()
       .doc("To detect if there have Optane PMem DIMMs")
       .booleanConf
       .createWithDefault(true)
   }
 
-  val OAP_NO_DETECT_RES = {
-    SqlConfAdapter.buildConf("spark.oap.nodetect_res")
+  val OAP_TEST_DETECTPMEM_RES = {
+    SqlConfAdapter.buildConf("spark.oap.test.detectPMem.res")
       .internal()
-      .doc("In no-detect sceniro,detectPM() result")
+      .doc("In no-detect sceniro,mock detectPMem() return value")
       .booleanConf
       .createWithDefault(true)
   }
