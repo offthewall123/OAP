@@ -214,8 +214,9 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
 private[filecache] object OapCache extends Logging {
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
-  def detectPMem(test: Boolean = true): Boolean = {
-    if (!test) return true
+  def detectPMem(test: Boolean = true, noDetectRes: Boolean = true): Boolean = {
+    if (test == false && noDetectRes == true) return true
+    if (test == false && noDetectRes == false) return false
     val detectPmemCmd = "sudo ipmctl show -dimm"
     val notFoundRegex = ".*not.*".r()
     val noPmemRegex = ".*No.*".r()
@@ -245,8 +246,9 @@ private[filecache] object OapCache extends Logging {
     val memoryManagerOpt =
       conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
     val detect = conf.get(OapConf.OAP_DETECT_PMEM_ENABLED.key, "true").toLowerCase
+    val noDetectRes = conf.get(OapConf.OAP_NO_DETECT_RES.key, "true").toLowerCase
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
-      if (!detectPMem(detect.toBoolean)) {
+      if (!detectPMem(detect.toBoolean, noDetectRes.toBoolean)) {
         if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
           return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
         }
@@ -266,9 +268,8 @@ private[filecache] object OapCache extends Logging {
       }
     }
     else {
-      logWarning(s"PMemRelatedCacheBackend doesn't support," + oapCacheOpt +
-        s" has to fall back to simple cache implementation")
-      new SimpleOapCache()
+      throw new UnsupportedOperationException(
+        s"The cache backend: ${oapCacheOpt} is not supported now")
     }
   }
 }

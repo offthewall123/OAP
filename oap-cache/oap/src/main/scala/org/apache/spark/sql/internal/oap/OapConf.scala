@@ -513,4 +513,12 @@ object OapConf {
       .booleanConf
       .createWithDefault(true)
   }
+
+  val OAP_NO_DETECT_RES = {
+    SqlConfAdapter.buildConf("spark.oap.nodetect_res")
+      .internal()
+      .doc("In no-detect sceniro,detectPM() result")
+      .booleanConf
+      .createWithDefault(true)
+  }
 }

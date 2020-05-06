@@ -33,17 +33,22 @@ class OapCacheSuite extends SharedOapContext with Logging{
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "not_support_cache")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "offheap")
+    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
+    sparkenv.conf.set("spark.oap.nodetect_res", "false")
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
-    val simpleOapCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
-    assert(simpleOapCache.isInstanceOf[SimpleOapCache])
+    assertThrows[UnsupportedOperationException] {
+      OapCache(sparkenv, cacheMemory,cacheGuardianMemory, fiberType)
+    }
   }
 
   test("detectPM guava cache offheap memory manager") {
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "offheap")
+    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
+    sparkenv.conf.set("spark.oap.nodetect_res", "false")
     val cacheMemory: Long = 100000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
@@ -51,13 +56,15 @@ class OapCacheSuite extends SharedOapContext with Logging{
     assert(guavaCache.isInstanceOf[GuavaOapCache])
   }
 
-  test("detectPM guava cache pm memory manager") {
+  test("detectPM guava simple cache") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
+    sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
+    sparkenv.conf.set("spark.oap.nodetect_res", "false")
     val simpleOapCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
     assert(simpleOapCache.isInstanceOf[SimpleOapCache])
   }
@@ -70,6 +77,7 @@ class OapCacheSuite extends SharedOapContext with Logging{
     sparkenv.conf.set("spark.oap.cache.strategy", "guava")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
     sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
+    sparkenv.conf.set("spark.oap.nodetect_res", "true")
     val guavaCache: OapCache = OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
     assert(guavaCache.isInstanceOf[GuavaOapCache])
   }
@@ -82,6 +90,7 @@ class OapCacheSuite extends SharedOapContext with Logging{
     sparkenv.conf.set("spark.oap.cache.strategy", "noevict")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
     sparkenv.conf.set("spark.oap.detectPmem.enabled", "false")
+    sparkenv.conf.set("spark.oap.nodetect_res", "true")
     val noevictCache: OapCache = OapCache(sparkenv, OapConf.OAP_FIBERCACHE_STRATEGY,
       cacheMemory, cacheGuardianMemory, fiberType)
     assert(noevictCache.isInstanceOf[NoEvictPMCache])
