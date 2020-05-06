@@ -39,7 +39,7 @@ class OapCacheSuite extends SharedOapContext with Logging{
     val cacheGuardianMemory: Long = 20000
     val fiberType: FiberType = FiberType.DATA
     assertThrows[UnsupportedOperationException] {
-      OapCache(sparkenv, cacheMemory,cacheGuardianMemory, fiberType)
+      OapCache(sparkenv, cacheMemory, cacheGuardianMemory, fiberType)
     }
   }
 
