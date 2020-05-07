@@ -56,7 +56,8 @@ class OapCacheSuite extends SharedOapContext with Logging{
     assert(guavaCache.isInstanceOf[GuavaOapCache])
   }
 
-  test("guava cache strategy and pm memory manager (without Optane PMem) -- fall back to simpleCache") {
+  test("guava cache strategy and pm memory manager (without Optane PMem) " +
+    "-- fall back to simpleCache") {
     val sparkenv = SparkEnv.get
     val cacheMemory: Long = 10000
     val cacheGuardianMemory: Long = 20000
@@ -69,7 +70,8 @@ class OapCacheSuite extends SharedOapContext with Logging{
     assert(simpleOapCache.isInstanceOf[SimpleOapCache])
   }
 
-  test("noevict cache strategy and pm memory manager (without Optane PMem) -- fallback to simpleCache") {
+  test("noevict cache strategy and pm memory manager (without Optane PMem) " +
+    "-- fallback to simpleCache") {
     val sparkenv = SparkEnv.get
     sparkenv.conf.set("spark.oap.cache.strategy", "noevict")
     sparkenv.conf.set("spark.sql.oap.fiberCache.memory.manager", "pm")
