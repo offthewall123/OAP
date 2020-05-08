@@ -24,8 +24,7 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 
 import scala.collection.JavaConverters._
-import scala.language.postfixOps
-import scala.sys.process._
+import scala.util.Success
 
 import com.google.common.cache._
 import com.google.common.hash._
@@ -214,20 +213,37 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
 private[filecache] object OapCache extends Logging {
   val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
-  def detectPMem(detectEnabled: Boolean = true, testDetectPmemRes: Boolean = true): Boolean = {
-    if (detectEnabled == false && testDetectPmemRes == true) return true
-    if (detectEnabled == false && testDetectPmemRes == false) return false
-    val detectPmemCmd = "sudo ipmctl show -dimm"
-    val notFoundRegex = ".*not.*".r()
-    val noPmemRegex = ".*No.*".r()
-    try {
-      val detectRes = detectPmemCmd.!!
-      if(!noPmemRegex.findFirstIn(detectRes).equals(None)||
-        !notFoundRegex.findFirstIn(detectRes).equals(None)) {
+  def cacheFallBackDetect(sparkEnv: SparkEnv,
+                          fallBackEnabled: Boolean = true,
+                          fallBackRes: Boolean = true): Boolean = {
+    if (fallBackEnabled == false && fallBackRes == true) return true
+    if (fallBackEnabled == false && fallBackRes == false) return false
+    val conf = sparkEnv.conf
+    var numaId = conf.getInt("spark.executor.numa.id", -1)
+    val executorIdStr = sparkEnv.executorId
+    scala.util.Try(executorIdStr.toInt) match {
+      case Success(_) => logDebug("valid executor id for numa binding.") ;
+      case _ =>
+        logWarning("invalid executor id for numa binding.")
         return false
-      }
-    } catch {
-      case e: Exception => return false
+    }
+    val executorId = executorIdStr.toInt
+    val map = PersistentMemoryConfigUtils.parseConfig(conf)
+    if (numaId == -1) {
+      logWarning(s"Executor ${executorId} is not bind with NUMA. It would be better to bind " +
+        s"executor with NUMA when cache data to Intel Optane DC persistent memory.")
+      numaId = executorId % PersistentMemoryConfigUtils.totalNumaNode(conf)
+    }
+    val initialPath = map.get(numaId).get
+    val initialSizeStr = conf.get(OapConf.OAP_FIBERCACHE_PERSISTENT_MEMORY_INITIAL_SIZE).trim
+    val initialSize = Utils.byteStringAsBytes(initialSizeStr)
+
+    val file: File = new File(initialPath)
+    if(!file.exists()) {
+       return false
+    }
+    if(initialSize > file.getUsableSpace) {
+      logWarning(s"Required initialSize larger than usable space will use largest usable space")
     }
     true
   }
@@ -245,10 +261,12 @@ private[filecache] object OapCache extends Logging {
       configEntry.defaultValue.get).toLowerCase
     val memoryManagerOpt =
       conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
-    val detectEnabled = conf.get(OapConf.OAP_DETECT_PMEM_ENABLED.key, "true").toLowerCase
-    val testDetectPmemRes = conf.get(OapConf.OAP_TEST_DETECTPMEM_RES.key, "true").toLowerCase
+    val fallBackEnabled = conf.get(OapConf.OAP_CACHE_BACKEND_FALLBACK_ENABLED.key,
+      "true").toLowerCase
+    val fallBackRes = conf.get(OapConf.OAP_TEST_CACHE_BACKEND_FALLBACK_RES.key,
+      "true").toLowerCase
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
-      if (!detectPMem(detectEnabled.toBoolean, testDetectPmemRes.toBoolean)) {
+      if (!cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean)) {
         if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
           return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
         }

@@ -506,18 +506,18 @@ object OapConf {
       .booleanConf
       .createWithDefault(false)
 
-  val OAP_DETECT_PMEM_ENABLED = {
-    SqlConfAdapter.buildConf("spark.oap.detectPMem.enabled")
+  val OAP_CACHE_BACKEND_FALLBACK_ENABLED = {
+    SqlConfAdapter.buildConf("spark.oap.cache.backend.fallback.enabled")
       .internal()
-      .doc("To detect if there have Optane PMem DIMMs")
+      .doc("To enable cache backend fallback")
       .booleanConf
       .createWithDefault(true)
   }
 
-  val OAP_TEST_DETECTPMEM_RES = {
-    SqlConfAdapter.buildConf("spark.oap.test.detectPMem.res")
+  val OAP_TEST_CACHE_BACKEND_FALLBACK_RES = {
+    SqlConfAdapter.buildConf("spark.oap.test.cache.backend.fallback.res")
       .internal()
-      .doc("In no-detect sceniro,mock detectPMem() return value")
+      .doc("For internal test use only")
       .booleanConf
       .createWithDefault(true)
   }
