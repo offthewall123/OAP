@@ -243,7 +243,8 @@ private[filecache] object OapCache extends Logging {
        return false
     }
     if(initialSize > file.getUsableSpace) {
-      logWarning(s"Required initialSize larger than usable space will use largest usable space")
+      logWarning(s"Required initialSize larger than usable space, will use largest usable space")
+      return false
     }
     true
   }
