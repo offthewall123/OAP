@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
-import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntArrayList
 import org.scalatest.BeforeAndAfterEach
+import parquet.it.unimi.dsi.fastutil.ints.IntArrayList
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.internal.Logging

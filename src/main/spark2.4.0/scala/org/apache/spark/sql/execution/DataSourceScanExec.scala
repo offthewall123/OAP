@@ -32,6 +32,7 @@ import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.physical.{HashPartitioning, Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.datasources.oap.{OapFileFormat, OapMetricsManager}
+import org.apache.spark.sql.execution.datasources.oap.missing.SparkUtils
 import org.apache.spark.sql.execution.datasources.parquet.{ParquetFileFormat => ParquetSource}
 import org.apache.spark.sql.execution.metric.SQLMetrics
 import org.apache.spark.sql.oap.OapRuntime
@@ -53,18 +54,18 @@ trait DataSourceScanExec extends LeafExecNode with CodegenSupport {
   // Metadata that describes more details of this scan.
   protected def metadata: Map[String, String]
 
-  override def simpleString: String = {
+  def simpleString: String = {
     val metadataEntries = metadata.toSeq.sorted.map {
       case (key, value) =>
         key + ": " + StringUtils.abbreviate(redact(value), 100)
     }
-    val metadataStr = Utils.truncatedString(metadataEntries, " ", ", ", "")
-    s"$nodeNamePrefix$nodeName${Utils.truncatedString(output, "[", ",", "]")}$metadataStr"
+    val metadataStr = SparkUtils.truncatedString(metadataEntries, " ", ", ", "")
+    s"$nodeNamePrefix$nodeName${SparkUtils.truncatedString(output, "[", ",", "]")}$metadataStr"
   }
 
-  override def verboseString: String = redact(super.verboseString)
+  def verboseString: String = redact(super.verboseString(10))
 
-  override def treeString(verbose: Boolean, addSuffix: Boolean): String = {
+  def treeString(verbose: Boolean, addSuffix: Boolean): String = {
     redact(super.treeString(verbose, addSuffix))
   }
 
@@ -472,7 +473,7 @@ case class FileSourceScanExec(
         val newPartition =
           FilePartition(
             partitions.size,
-            currentFiles.toArray.toSeq) // Copy to a new Array.
+            currentFiles.toArray) // Copy to a new Array.
         partitions += newPartition
       }
       currentFiles.clear()

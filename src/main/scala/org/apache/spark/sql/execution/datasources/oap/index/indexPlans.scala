@@ -293,7 +293,7 @@ case class DropIndexCommand(
               throw new AnalysisException(s"""Index $indexName does not exist on $parent""")
           }
         }
-      case other => sys.error(s"We don't support index dropping for ${other.simpleString}")
+      case other => sys.error(s"We don't support index dropping for ${other.toString()}")
     }
     Seq.empty
   }
@@ -465,7 +465,7 @@ case class OapShowIndexCommand(table: TableIdentifier, relationName: String)
       case LogicalRelation(HadoopFsRelation(f, _, s, _, _, _), _, id, _) =>
         (f, s)
       case other =>
-        throw new OapException(s"We don't support index listing for ${other.simpleString}")
+        throw new OapException(s"We don't support index listing for ${other.toString()}")
     }
 
     val partitions = OapUtils.getPartitions(fileCatalog).filter(_.files.nonEmpty)
@@ -644,7 +644,7 @@ case class OapCheckIndexCommand(
       case LogicalRelation(HadoopFsRelation(f, _, s, _, _, _), _, id, _) =>
         (f, s)
       case other =>
-        throw new OapException(s"We don't support index checking for ${other.simpleString}")
+        throw new OapException(s"We don't support index checking for ${other.toString()}")
     }
 
     val rootPaths = fileCatalog.rootPaths

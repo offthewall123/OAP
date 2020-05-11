@@ -16,7 +16,7 @@
  */
 package org.apache.parquet.hadoop.metadata;
 
-import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntList;
+import parquet.it.unimi.dsi.fastutil.ints.IntList;
 
 /**
  * IndexedBlockMetaData extends with need rowids which use by xxxIndexedReader.

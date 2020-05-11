@@ -24,9 +24,9 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.physical._
 import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.datasources.oap.missing.SparkUtils
 import org.apache.spark.sql.execution.metric.SQLMetrics
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.util.Utils
 
 /**
  * Oap Aggregation Exec which is applied to index-ed OAP data only.
@@ -100,15 +100,15 @@ case class OapAggregateExec(
     }
   }
 
-  override def verboseString: String = toString(verbose = true)
+  def verboseString: String = toString(verbose = true)
 
-  override def simpleString: String = toString(verbose = false)
+  def simpleString: String = toString(verbose = false)
 
   private def toString(verbose: Boolean): String = {
     val allAggregateExpressions = aggregateExpressions
-    val keyString = Utils.truncatedString(groupingExpressions, "[", ", ", "]")
-    val functionString = Utils.truncatedString(allAggregateExpressions, "[", ", ", "]")
-    val outputString = Utils.truncatedString(output, "[", ", ", "]")
+    val keyString = SparkUtils.truncatedString(groupingExpressions, "[", ", ", "]")
+    val functionString = SparkUtils.truncatedString(allAggregateExpressions, "[", ", ", "]")
+    val outputString = SparkUtils.truncatedString(output, "[", ", ", "]")
     if (verbose) {
       s"OapAggregate(keys=$keyString, functions=$functionString, output=$outputString)"
     } else {

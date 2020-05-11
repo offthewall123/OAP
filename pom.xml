@@ -36,7 +36,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.useIncrementalCompilation>false</maven.compiler.useIncrementalCompilation>
     <basedir>./</basedir>
-    <spark.internal.version>2.4.0-cdh6.3.2</spark.internal.version>
+    <spark.internal.version>2.4.0.7.0.3.0-79</spark.internal.version>
 <!--    <spark.internal.version>2.4.4</spark.internal.version>-->
     <scala.version>2.11.12</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
@@ -364,6 +364,11 @@
           <artifactId>guava</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>18.0</version>
     </dependency>
   </dependencies>
 

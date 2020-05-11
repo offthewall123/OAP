@@ -403,7 +403,8 @@ private[oap] object IndexUtils extends  Logging {
         (f, s, OapFileFormat.PARQUET_DATA_FILE_CLASSNAME, id, logical)
 
       case other =>
-        throw new OapException(s"We don't support index operation for ${other.simpleString}")
+//        throw new OapException(s"We don't support index operation for ${other.simpleString}")
+        throw new OapException(s"We don't support index operation for ${other.toString()}")
     }
     (fileCatalog, schema, readerClassName, identifier, relation)
   }

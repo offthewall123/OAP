@@ -48,6 +48,7 @@ import org.apache.parquet.hadoop.metadata.ColumnPath;
 import org.apache.parquet.hadoop.metadata.FileMetaData;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.hadoop.util.HadoopStreams;
+import org.apache.parquet.internal.column.columnindex.OffsetIndex;
 import org.apache.parquet.io.ParquetDecodingException;
 import org.apache.parquet.io.SeekableInputStream;
 import org.apache.parquet.schema.PrimitiveType;
@@ -224,7 +225,7 @@ public class ParquetFiberDataReader implements Closeable {
      * Read all of the pages in a given column chunk.
      * @return the list of pages
      */
-    ColumnChunkPageReadStore.ColumnChunkPageReader readAllPages() throws IOException {
+    public ColumnChunkPageReadStore.ColumnChunkPageReader readAllPages() throws IOException {
       List<DataPage> pagesInChunk = new ArrayList<>();
       DictionaryPage dictionaryPage = null;
       PrimitiveType type = getFileMetaData().getSchema()
@@ -305,8 +306,31 @@ public class ParquetFiberDataReader implements Closeable {
       }
       CodecFactory.BytesDecompressor decompressor = codecFactory.getDecompressor(
               descriptor.metadata.getCodec());
+      OffsetIndex offsetIndex = new OffsetIndex() {
+        @Override
+        public int getPageCount() {
+          return 0;
+        }
+
+        @Override
+        public long getOffset(int i) {
+          return 0;
+        }
+
+        @Override
+        public int getCompressedPageSize(int i) {
+          return 0;
+        }
+
+        @Override
+        public long getFirstRowIndex(int i) {
+          return 0;
+        }
+      };
+      long rowCount = 1000L;
       return new ColumnChunkPageReadStore
-              .ColumnChunkPageReader(decompressor, pagesInChunk, dictionaryPage);
+              .ColumnChunkPageReader(decompressor,
+              pagesInChunk, dictionaryPage, offsetIndex, rowCount);
     }
 
     private BytesInput readAsBytesInput(int size) throws IOException {

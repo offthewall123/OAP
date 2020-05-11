@@ -28,8 +28,9 @@ import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.IndexedBlockMetaData;
 import org.apache.parquet.hadoop.metadata.ParquetFooter;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
-import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.parquet.schema.MessageType;
+
+import parquet.it.unimi.dsi.fastutil.ints.IntList;
 
 import static org.apache.parquet.format.converter.ParquetMetadataConverter.NO_FILTER;
 

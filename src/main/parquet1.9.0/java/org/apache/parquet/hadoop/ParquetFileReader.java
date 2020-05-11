@@ -28,9 +28,10 @@ import static org.apache.parquet.hadoop.ParquetFileWriter.MAGIC;
 import static org.apache.parquet.hadoop.ParquetFileWriter.PARQUET_COMMON_METADATA_FILE;
 import static org.apache.parquet.hadoop.ParquetFileWriter.PARQUET_METADATA_FILE;
 import static org.apache.parquet.hadoop.ParquetInputFormat.DICTIONARY_FILTERING_ENABLED;
-import static org.apache.parquet.hadoop.ParquetInputFormat.DICTIONARY_FILTERING_ENABLED_DEFAULT;
 import static org.apache.parquet.hadoop.ParquetInputFormat.STATS_FILTERING_ENABLED;
-import static org.apache.parquet.hadoop.ParquetInputFormat.STATS_FILTERING_ENABLED_DEFAULT;
+
+import static org.apache.spark.sql.execution.datasources.oap.missing.MissingParquetInputFormat.DICTIONARY_FILTERING_ENABLED_DEFAULT;
+import static org.apache.spark.sql.execution.datasources.oap.missing.MissingParquetInputFormat.STATS_FILTERING_ENABLED_DEFAULT;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -91,12 +92,15 @@ import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.apache.parquet.hadoop.util.HiddenFileFilter;
 import org.apache.parquet.hadoop.util.HadoopStreams;
+import org.apache.parquet.internal.column.columnindex.OffsetIndex;
 import org.apache.parquet.io.SeekableInputStream;
 import org.apache.parquet.hadoop.util.counters.BenchmarkCounter;
 import org.apache.parquet.io.ParquetDecodingException;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Internal implementation of the Parquet file reader as a block container
@@ -106,7 +110,7 @@ import org.apache.parquet.schema.PrimitiveType;
  */
 public class ParquetFileReader implements Closeable {
 
-  private static final Log LOG = Log.getLog(ParquetFileReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ParquetFileReader.class);
 
   public static String PARQUET_READ_PARALLELISM = "parquet.metadata.read.parallelism";
 
@@ -841,6 +845,7 @@ public class ParquetFileReader implements Closeable {
    */
   class Chunk extends ByteBufferInputStream {
 
+    protected final ByteBufferInputStream stream;
     protected final ChunkDescriptor descriptor;
 
     /**
@@ -849,8 +854,9 @@ public class ParquetFileReader implements Closeable {
      * @param data contains the chunk data at offset
      * @param offset where the chunk starts in offset
      */
-    public Chunk(ChunkDescriptor descriptor, ByteBuffer data, int offset) {
+    public Chunk(ChunkDescriptor descriptor, ByteBuffer data, int offset, List<ByteBuffer> buffers) {
       super(data, offset, descriptor.size);
+      this.stream = ByteBufferInputStream.wrap(buffers);
       this.descriptor = descriptor;
     }
 
@@ -939,18 +945,40 @@ public class ParquetFileReader implements Closeable {
             "Expected " + descriptor.metadata.getValueCount() + " values in column chunk at " +
             getPath() + " offset " + descriptor.metadata.getFirstDataPageOffset() +
             " but got " + valuesCountReadSoFar + " values instead over " + pagesInChunk.size()
-            + " pages ending at file offset " + (descriptor.fileOffset + pos()));
+            + " pages ending at file offset " + (descriptor.fileOffset + stream.position()));
       }
       BytesDecompressor decompressor = codecFactory.getDecompressor(descriptor.metadata.getCodec());
-      return new ColumnChunkPageReader(decompressor, pagesInChunk, dictionaryPage);
+      OffsetIndex offsetIndex = new OffsetIndex() {
+        @Override
+        public int getPageCount() {
+          return 0;
+        }
+
+        @Override
+        public long getOffset(int i) {
+          return 0;
+        }
+
+        @Override
+        public int getCompressedPageSize(int i) {
+          return 0;
+        }
+
+        @Override
+        public long getFirstRowIndex(int i) {
+          return 0;
+        }
+      };
+      long rowCount = 1000L;
+      return new ColumnChunkPageReader(decompressor, pagesInChunk, dictionaryPage, offsetIndex, rowCount);
     }
 
     /**
      * @return the current position in the chunk
      */
-    public int pos() {
-      return this.byteBuf.position();
-    }
+//    public int pos() {
+//      return this.byteBuf.position();
+//    }
 
     /**
      * @param size the size of the page
@@ -958,10 +986,7 @@ public class ParquetFileReader implements Closeable {
      * @throws IOException
      */
     public BytesInput readAsBytesInput(int size) throws IOException {
-      int pos = this.byteBuf.position();
-      final BytesInput r = BytesInput.from(this.byteBuf, pos, size);
-      this.byteBuf.position(pos + size);
-      return r;
+      return BytesInput.from(stream.sliceBuffers(size));
     }
 
   }
@@ -982,39 +1007,47 @@ public class ParquetFileReader implements Closeable {
      * @param offset where the chunk starts in data
      * @param f the file stream positioned at the end of this chunk
      */
-    WorkaroundChunk(ChunkDescriptor descriptor, ByteBuffer byteBuf, int offset, SeekableInputStream f) {
-      super(descriptor, byteBuf, offset);
+    WorkaroundChunk(ChunkDescriptor descriptor, List<ByteBuffer> buffers, ByteBuffer byteBuf, int offset, SeekableInputStream f) {
+      super(descriptor, byteBuf, offset, buffers);
       this.f = f;
     }
 
     protected PageHeader readPageHeader() throws IOException {
       PageHeader pageHeader;
-      int initialPos = pos();
+      stream.mark(8192); // headers should not be larger than 8k
       try {
-        pageHeader = Util.readPageHeader(this);
+        pageHeader = Util.readPageHeader(stream);
       } catch (IOException e) {
         // this is to workaround a bug where the compressedLength
         // of the chunk is missing the size of the header of the dictionary
         // to allow reading older files (using dictionary) we need this.
         // usually 13 to 19 bytes are missing
         // if the last page is smaller than this, the page header itself is truncated in the buffer.
-        this.byteBuf.position(initialPos); // resetting the buffer to the position before we got the error
+        stream.reset(); // resetting the buffer to the position before we got the error
         LOG.info("completing the column chunk to read the page header");
-        pageHeader = Util.readPageHeader(new SequenceInputStream(this, f)); // trying again from the buffer + remainder of the stream.
+        pageHeader = Util.readPageHeader(new SequenceInputStream(stream, f)); // trying again from the buffer + remainder of the stream.
       }
       return pageHeader;
     }
 
     public BytesInput readAsBytesInput(int size) throws IOException {
-      if (pos() + size > initPos + count) {
+      int available = stream.available();
+      if (size > available) {
         // this is to workaround a bug where the compressedLength
         // of the chunk is missing the size of the header of the dictionary
         // to allow reading older files (using dictionary) we need this.
         // usually 13 to 19 bytes are missing
-        int l1 = initPos + count - pos();
-        int l2 = size - l1;
-        LOG.info("completed the column chunk with " + l2 + " bytes");
-        return BytesInput.concat(super.readAsBytesInput(l1), BytesInput.copy(BytesInput.from(f, l2)));
+        int missingBytes = size - available;
+        LOG.info("completed the column chunk with {} bytes", missingBytes);
+
+        List<ByteBuffer> buffers = new ArrayList<>();
+        buffers.addAll(stream.sliceBuffers(available));
+
+        ByteBuffer lastBuffer = ByteBuffer.allocate(missingBytes);
+        f.readFully(lastBuffer);
+        buffers.add(lastBuffer);
+
+        return BytesInput.from(buffers);
       }
       return super.readAsBytesInput(size);
     }
@@ -1092,16 +1125,19 @@ public class ParquetFileReader implements Closeable {
       ByteBuffer chunksByteBuffer = allocator.allocate(length);
       f.readFully(chunksByteBuffer);
 
+      List<ByteBuffer> buffers = new ArrayList<>(1000);
+
       // report in a counter the data we just scanned
       BenchmarkCounter.incrementBytesRead(length);
+      ByteBufferInputStream stream = ByteBufferInputStream.wrap(buffers);
       int currentChunkOffset = 0;
       for (int i = 0; i < chunks.size(); i++) {
         ChunkDescriptor descriptor = chunks.get(i);
         if (i < chunks.size() - 1) {
-          result.add(new Chunk(descriptor, chunksByteBuffer, currentChunkOffset));
+          result.add(new Chunk(descriptor, chunksByteBuffer, currentChunkOffset, buffers));
         } else {
           // because of a bug, the last chunk might be larger than descriptor.size
-          result.add(new WorkaroundChunk(descriptor, chunksByteBuffer, currentChunkOffset, f));
+          result.add(new WorkaroundChunk(descriptor, stream.sliceBuffers(descriptor.size), chunksByteBuffer, currentChunkOffset, f));
         }
         currentChunkOffset += descriptor.size;
       }

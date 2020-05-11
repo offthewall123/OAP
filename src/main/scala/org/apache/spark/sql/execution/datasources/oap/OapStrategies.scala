@@ -34,11 +34,11 @@ import org.apache.spark.sql.execution
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.aggregate.OapAggUtils
 import org.apache.spark.sql.execution.datasources._
+import org.apache.spark.sql.execution.datasources.oap.missing.SparkUtils
 import org.apache.spark.sql.execution.datasources.oap.utils.CaseInsensitiveMap
 import org.apache.spark.sql.execution.joins.BuildRight
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.oap.adapter.{AggregateFunctionAdapter, FileIndexAdapter, FileSourceScanExecAdapter, LogicalPlanAdapter}
-import org.apache.spark.util.Utils
 
 trait OapStrategy extends Strategy with Logging {
 
@@ -434,9 +434,9 @@ case class OapOrderLimitFileScanExec(
     projectList: Seq[NamedExpression],
     child: SparkPlan) extends OapFileScanExec {
 
-  override def simpleString: String = {
-    val orderByString = Utils.truncatedString(sortOrder, "[", ",", "]")
-    val outputString = Utils.truncatedString(output, "[", ",", "]")
+   def simpleString: String = {
+    val orderByString = SparkUtils.truncatedString(sortOrder, "[", ",", "]")
+    val outputString = SparkUtils.truncatedString(output, "[", ",", "]")
 
     s"OapOrderLimitFileScanExec(limit=$limit, orderBy=$orderByString, output=$outputString)"
   }
@@ -447,8 +447,8 @@ case class OapDistinctFileScanExec(
     projectList: Seq[NamedExpression],
     child: SparkPlan) extends OapFileScanExec {
 
-  override def simpleString: String = {
-    val outputString = Utils.truncatedString(output, "[", ",", "]")
+  def simpleString: String = {
+    val outputString = SparkUtils.truncatedString(output, "[", ",", "]")
 
     s"OapDistinctFileScanExec(output=$outputString, scan [$scanNumber] row of each index)"
   }
@@ -459,9 +459,9 @@ case class OapAggregationFileScanExec(
     projectList: Seq[NamedExpression],
     child: SparkPlan) extends OapFileScanExec {
 
-  override def simpleString: String = {
-    val outputString = Utils.truncatedString(output, "[", ",", "]")
-    val aggString = Utils.truncatedString(aggExpression, "[", ",", "]")
+  def simpleString: String = {
+    val outputString = SparkUtils.truncatedString(output, "[", ",", "]")
+    val aggString = SparkUtils.truncatedString(aggExpression, "[", ",", "]")
 
     s"OapAggregationFileScanExec(output=$outputString, Aggregation function=$aggString)"
   }
