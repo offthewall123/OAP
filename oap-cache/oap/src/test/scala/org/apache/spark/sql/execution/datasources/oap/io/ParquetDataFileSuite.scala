@@ -1498,8 +1498,7 @@ class ParquetCacheDataSuite extends ParquetDataFileSuite {
     for (i <- 0 until length) {
       assert(i == result(i))
     }
-    // After upgrade the parquet to 1.10.1, the row group count is 5 not 4.
-    assert(OapRuntime.getOrCreate.fiberCacheManager.cacheCount == 5, "Cache count does not match.")
+    assert(OapRuntime.getOrCreate.fiberCacheManager.cacheCount == 4, "Cache count does not match.")
   }
 }
 

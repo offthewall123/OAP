@@ -628,8 +628,4 @@ public final class OnHeapColumnVector extends WritableColumnVector {
   protected OnHeapColumnVector reserveNewColumn(int capacity, DataType type) {
     return new OnHeapColumnVector(capacity, type);
   }
-
-  public int getCapacity() {
-    return capacity;
-  }
 }

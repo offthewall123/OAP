@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -std=c++11  -shared -Wl,-soname,libpmplatform.so -o libpmplatform.so CMakeFiles/pmplatform.dir/org_apache_spark_unsafe_PersistentMemoryPlatform.cpp.o -lmemkind 

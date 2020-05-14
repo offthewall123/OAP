@@ -23,7 +23,6 @@ import org.apache.parquet.hadoop.ParquetInputFormat
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFiltersWrapper
-import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.types.StructType
 
@@ -33,19 +32,19 @@ object FilterHelper {
       sparkSession: SparkSession,
       requiredSchema: StructType,
       filters: Seq[Filter]): Option[FilterPredicate] = {
-    tryToPushFilters(sparkSession.sessionState.conf, requiredSchema, filters)
+    tryToPushFilters(sparkSession.sessionState.conf.parquetFilterPushDown, requiredSchema, filters)
   }
 
   def tryToPushFilters(
-      conf: SQLConf,
+      filterPushDown: Boolean,
       requiredSchema: StructType,
       filters: Seq[Filter]): Option[FilterPredicate] = {
-    if (conf.parquetFilterPushDown) {
+    if (filterPushDown) {
       filters
         // Collects all converted Parquet filter predicates. Notice that not all predicates can be
         // converted (`ParquetFilters.createFilter` returns an `Option`). That's why a `flatMap`
         // is used here.
-        .flatMap(ParquetFiltersWrapper.createFilter(conf, requiredSchema, _))
+        .flatMap(ParquetFiltersWrapper.createFilter(requiredSchema, _))
         .reduceOption(FilterApi.and)
     } else {
       None

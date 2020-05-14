@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.execution.datasources.parquet
 
-import org.apache.parquet.bytes.{BytesInput, HeapByteBufferAllocator}
 import org.apache.parquet.column.values.rle.RunLengthBitPackingHybridValuesWriter
 
 import org.apache.spark.SparkFunSuite
@@ -27,14 +26,13 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
 
   test("bit packing read and skip Integer") {
     // prepare data
-    val writer = new RunLengthBitPackingHybridValuesWriter(
-      3, 5, 10, HeapByteBufferAllocator.getInstance())
+    val writer = new RunLengthBitPackingHybridValuesWriter(3, 5, 10)
     (0 until 100).foreach(i => writer.writeInteger(i % 3))
 
     // init reader
     val data = writer.getBytes.toByteArray
     val reader = new SkippableVectorizedRleValuesReader(3)
-    reader.initFromPage(100, BytesInput.from(data).toInputStream)
+    reader.initFromPage(100, data, 0)
 
     // test skip and read Integer
     reader.skipIntegers(32)
@@ -45,15 +43,14 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
 
   test("rle read and skip Integer") {
     // prepare data
-    val writer = new RunLengthBitPackingHybridValuesWriter(
-      3, 5, 10, HeapByteBufferAllocator.getInstance())
+    val writer = new RunLengthBitPackingHybridValuesWriter(3, 5, 10)
     (0 until 10).foreach(_ => writer.writeInteger(4))
     (0 until 10).foreach(_ => writer.writeInteger(5))
 
     // init reader
     val data = writer.getBytes.toByteArray
     val reader = new SkippableVectorizedRleValuesReader(3)
-    reader.initFromPage(20, BytesInput.from(data).toInputStream)
+    reader.initFromPage(20, data, 0)
 
     // test skip and read Integer
     reader.skipIntegers(8)
@@ -64,15 +61,14 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
 
   test("rle read and skip Boolean") {
     // prepare data
-    val writer = new RunLengthBitPackingHybridValuesWriter(
-      3, 5, 10, HeapByteBufferAllocator.getInstance())
+    val writer = new RunLengthBitPackingHybridValuesWriter(3, 5, 10)
     (0 until 10).foreach(_ => writer.writeBoolean(true))
     (0 until 10).foreach(_ => writer.writeBoolean(false))
 
     // init reader
     val data = writer.getBytes.toByteArray
     val reader = new SkippableVectorizedRleValuesReader(3)
-    reader.initFromPage(20, BytesInput.from(data).toInputStream)
+    reader.initFromPage(20, data, 0)
 
     // test skip and read boolean
     reader.skipBoolean()
@@ -87,7 +83,7 @@ class SkippableVectorizedRleValuesReaderSuite extends SparkFunSuite with Logging
     // init reader
     val data = Array.emptyByteArray
     val reader = new SkippableVectorizedRleValuesReader()
-    reader.initFromPage(0, BytesInput.from(data).toInputStream)
+    reader.initFromPage(0, data, 0)
 
     // skipByte should throw UnsupportedOperationException
     intercept[UnsupportedOperationException] {

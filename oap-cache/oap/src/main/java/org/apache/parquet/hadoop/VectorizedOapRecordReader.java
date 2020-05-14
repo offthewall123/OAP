@@ -118,6 +118,8 @@ public class VectorizedOapRecordReader extends SpecificOapRecordReaderBase<Objec
      * not belong to SpecificParquetRecordReaderBase
      */
     protected Configuration configuration;
+    protected ParquetFooter footer;
+
     /**
      * VectorizedOapRecordReader Contructor
      * new method
@@ -133,8 +135,6 @@ public class VectorizedOapRecordReader extends SpecificOapRecordReaderBase<Objec
       this.configuration = configuration;
       this.footer = footer;
     }
-
-  protected ParquetFooter footer;
 
     public VectorizedOapRecordReader(
         Path file,
@@ -153,7 +153,7 @@ public class VectorizedOapRecordReader extends SpecificOapRecordReaderBase<Objec
     @Override
     public void initialize() throws IOException, InterruptedException {
       // no index to use, try do filterRowGroups to skip rowgroups.
-      initialize(footer.toParquetMetadata(), configuration);
+      initialize(footer.toParquetMetadata(), configuration, true);
       initializeInternal();
     }
 

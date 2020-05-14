@@ -1,0 +1,1 @@
+/home/xdy/Desktop/OAP/src/main/resources/linux/64/lib/libpmplatform.so

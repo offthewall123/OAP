@@ -1,0 +1,7 @@
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/install/strip.dir
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/edit_cache.dir
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/pmplatform.dir
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/rebuild_cache.dir
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/list_install_components.dir
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/install/local.dir
+/home/xdy/Desktop/OAP/src/main/native/build/CMakeFiles/install.dir

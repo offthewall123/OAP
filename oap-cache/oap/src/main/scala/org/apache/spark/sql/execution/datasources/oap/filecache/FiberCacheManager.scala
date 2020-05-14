@@ -17,12 +17,13 @@
 
 package org.apache.spark.sql.execution.datasources.oap.filecache
 
-import java.util.concurrent.{ConcurrentHashMap, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, LinkedBlockingQueue, TimeUnit}
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.locks.ReentrantReadWriteLock
+import java.util.concurrent.locks.{Condition, ReentrantLock, ReentrantReadWriteLock}
 
 import com.google.common.cache._
-import org.apache.hadoop.fs.FSDataInputStream
+import org.apache.hadoop.conf.Configuration
+import org.apache.parquet.format.CompressionCodec
 
 import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
@@ -31,18 +32,104 @@ import org.apache.spark.sql.execution.datasources.oap.io._
 import org.apache.spark.sql.execution.datasources.oap.utils.CacheStatusSerDe
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.oap.OapRuntime
-import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 import org.apache.spark.util.collection.OapBitSet
 
+private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logging {
+
+  // pendingFiberSize and pendingFiberCapacity are different. pendingFiberSize used to
+  // show the pending size to user, however pendingFiberCapacity is used to record the
+  // actual used memory and log warn when exceed the maxMemory.
+  private val _pendingFiberSize: AtomicLong = new AtomicLong(0)
+  private val _pendingFiberCapacity: AtomicLong = new AtomicLong(0)
+
+  private val removalPendingQueue = new LinkedBlockingQueue[(FiberId, FiberCache)]()
+
+  private val guardianLock = new ReentrantLock()
+  private val guardianLockCond = guardianLock.newCondition()
+
+  private var waitNotifyActive: Boolean = false
+
+  // Tell if guardian thread is trying to remove one Fiber.
+  @volatile private var bRemoving: Boolean = false
+
+  def enableWaitNotifyActive(): Unit = {
+    waitNotifyActive = true
+  }
+
+  def getGuardianLock(): ReentrantLock = {
+    guardianLock
+  }
+
+  def getGuardianLockCondition(): Condition = {
+    guardianLockCond
+  }
+
+  def pendingFiberCount: Int = if (bRemoving) {
+    removalPendingQueue.size() + 1
+  } else {
+    removalPendingQueue.size()
+  }
+
+  def pendingFiberSize: Long = _pendingFiberSize.get()
+
+  def pendingFiberOccupiedSize: Long = _pendingFiberCapacity.get()
+
+  def addRemovalFiber(fiber: FiberId, fiberCache: FiberCache): Unit = {
+    _pendingFiberSize.addAndGet(fiberCache.size())
+    // Record the occupied size
+    _pendingFiberCapacity.addAndGet(fiberCache.getOccupiedSize())
+    removalPendingQueue.offer((fiber, fiberCache))
+    if (_pendingFiberCapacity.get() > maxMemory) {
+      logWarning("Fibers pending on removal use too much memory, " +
+          s"current: ${_pendingFiberCapacity.get()}, max: $maxMemory")
+    }
+  }
+
+  override def run(): Unit = {
+    while (true) {
+      val fiberCache = removalPendingQueue.take()._2
+      releaseFiberCache(fiberCache)
+    }
+  }
+
+  private def releaseFiberCache(cache: FiberCache): Unit = {
+    bRemoving = true
+    val fiberId = cache.fiberId
+    logDebug(s"Removing fiber: $fiberId")
+    // Block if fiber is in use.
+    if (!cache.tryDispose()) {
+      logDebug(s"Waiting fiber to be released timeout. Fiber: $fiberId")
+      removalPendingQueue.offer((fiberId, cache))
+      if (_pendingFiberCapacity.get() > maxMemory) {
+        logWarning("Fibers pending on removal use too much memory, " +
+            s"current: ${_pendingFiberCapacity.get()}, max: $maxMemory")
+      }
+    } else {
+      _pendingFiberSize.addAndGet(-cache.size())
+
+      // TODO: Make log more readable
+      logDebug(s"Fiber removed successfully. Fiber: $fiberId")
+      if (waitNotifyActive) {
+        this.getGuardianLock().lock()
+        _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
+        if (_pendingFiberCapacity.get() == 0) {
+          guardianLockCond.signalAll()
+        }
+        this.getGuardianLock().unlock()
+      } else {
+        _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
+      }
+    }
+    bRemoving = false
+  }
+}
+
 private[sql] class FiberCacheManager(
-    sparkEnv: SparkEnv) extends Logging {
+    sparkEnv: SparkEnv, memoryManager: MemoryManager) extends Logging {
+
   private val GUAVA_CACHE = "guava"
   private val SIMPLE_CACHE = "simple"
-  private val NO_EVICT_CACHE = "noevict"
-  private val VMEM_CACHE = "vmem"
-  private val MIX_CACHE = "mix"
-  private val EXTERNAL_CACHE = "external"
   private val DEFAULT_CACHE_STRATEGY = GUAVA_CACHE
 
   private var _dataCacheCompressEnable = sparkEnv.conf.get(
@@ -54,55 +141,36 @@ private[sql] class FiberCacheManager(
 
   private val _dcpmmWaitingThreshold = sparkEnv.conf.get(OapConf.DCPMM_FREE_WAIT_THRESHOLD)
 
-  private val cacheAllocator: CacheMemoryAllocator = CacheMemoryAllocator(sparkEnv)
-  private val fiberLockManager = new FiberLockManager()
-
-  var dataCacheMemorySize: Long = cacheAllocator.dataCacheMemorySize
-  var indexCacheMemorySize: Long = cacheAllocator.indexCacheMemorySize
-  def dataCacheGuardianMemorySize: Long = cacheAllocator.dataCacheGuardianMemorySize
-  def indexCacheGuardianMemorySize: Long = cacheAllocator.indexCacheGuardianMemorySize
-
   def dataCacheCompressEnable: Boolean = _dataCacheCompressEnable
   def dataCacheCompressionCodec: String = _dataCacheCompressionCodec
   def dataCacheCompressionSize: Int = _dataCacheCompressionSize
 
   def dcpmmWaitingThreshold: Long = _dcpmmWaitingThreshold
-  def inMixMode: Boolean = cacheAllocator.separateMemory
 
   private val cacheBackend: OapCache = {
-    if (!inMixMode) {
-      dataCacheMemorySize = dataCacheMemorySize + indexCacheMemorySize
-    }
-
     val cacheName = sparkEnv.conf.get("spark.oap.cache.strategy", DEFAULT_CACHE_STRATEGY)
     if (cacheName.equals(GUAVA_CACHE)) {
-      new GuavaOapCache(dataCacheMemorySize, dataCacheGuardianMemorySize, FiberType.DATA)
-    } else if (cacheName.equals(SIMPLE_CACHE)) {
-      new SimpleOapCache()
-    } else if (cacheName.equals(NO_EVICT_CACHE)) {
-      new NoEvictPMCache(dataCacheMemorySize, dataCacheGuardianMemorySize, FiberType.DATA)
-    } else if (cacheName.equals(VMEM_CACHE)) {
-      new VMemCache(FiberType.DATA)
-    } else if (cacheName.equals(EXTERNAL_CACHE)) {
-      new ExternalCache(FiberType.DATA)
-    } else if (cacheName.equals(MIX_CACHE)) {
-      val separateCache = sparkEnv.conf.getBoolean(
+      val indexDataSeparationEnable = sparkEnv.conf.getBoolean(
         OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.key,
         OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.defaultValue.get
       )
-      new MixCache(dataCacheMemorySize, indexCacheMemorySize, dataCacheGuardianMemorySize,
-        indexCacheGuardianMemorySize, separateCache, sparkEnv)
+      new GuavaOapCache(
+        memoryManager.dataCacheMemory,
+        memoryManager.indexCacheMemory,
+        memoryManager.cacheGuardianMemory,
+        indexDataSeparationEnable)
+    } else if (cacheName.equals(SIMPLE_CACHE)) {
+      new SimpleOapCache()
     } else {
       throw new OapException(s"Unsupported cache strategy $cacheName")
     }
   }
 
   def stop(): Unit = {
-    cacheAllocator.stop()
     cacheBackend.cleanUp()
   }
 
-  if (isDcpmmUsed()) {
+  if (memoryManager.isDcpmmUsed()) {
     cacheBackend.getCacheGuardian.enableWaitNotifyActive()
   }
   // NOTE: all members' init should be placed before this line.
@@ -112,96 +180,11 @@ private[sql] class FiberCacheManager(
     logDebug(s"Getting Fiber: $fiber")
     cacheBackend.get(fiber)
   }
-
-  def getIfPresent(fiber: FiberId): FiberCache = {
-    cacheBackend.getIfPresent(fiber)
-  }
-
   // only for unit test
   def setCompressionConf(dataEnable: Boolean = false,
       dataCompressCodec: String = "SNAPPY"): Unit = {
     _dataCacheCompressEnable = dataEnable
     _dataCacheCompressionCodec = dataCompressCodec
-  }
-
-  private[filecache] def freeFiber(fiberCache: FiberCache): Unit = {
-    if (!fiberCache.isFailedMemoryBlock()) {
-      freeFiberMemory(fiberCache)
-    } else {
-      fiberCache.resetColumn();
-    }
-    fiberLockManager.removeFiberLock(fiberCache.fiberId)
-  }
-
-  private[filecache] def allocateFiberMemory(fiberType: FiberType.FiberType,
-    length: Long): MemoryBlockHolder = {
-    fiberType match {
-      case FiberType.DATA => cacheAllocator.allocateDataMemory(length)
-      case FiberType.INDEX => cacheAllocator.allocateIndexMemory(length)
-      case _ => throw new UnsupportedOperationException("Unsupported fiber type")
-    }
-  }
-
-  private[filecache] def freeFiberMemory(fiberCache: FiberCache): Unit = {
-    fiberCache.fiberType match {
-      case FiberType.DATA => cacheAllocator.freeDataMemory(fiberCache.fiberData)
-      case FiberType.INDEX => cacheAllocator.freeIndexMemory(fiberCache.fiberData)
-      case _ => throw new UnsupportedOperationException("Unsupported fiber type")
-    }
-  }
-
-  private[filecache] def getFiberLock(fiber: FiberId): ReentrantReadWriteLock = {
-    fiberLockManager.getFiberLock(fiber)
-  }
-
-  private[filecache] def removeFiberLock(fiber: FiberId): Unit = {
-    fiberLockManager.removeFiberLock(fiber)
-  }
-
-  @inline protected def toFiberCache(fiberType: FiberType.FiberType,
-    bytes: Array[Byte]): FiberCache = {
-    val block = allocateFiberMemory(fiberType, bytes.length)
-    if (block.length != 0) {
-      Platform.copyMemory(
-        bytes,
-        Platform.BYTE_ARRAY_OFFSET,
-        block.baseObject,
-        block.baseOffset,
-        bytes.length)
-      FiberCache(fiberType, block)
-    } else {
-      val fiberCache = FiberCache(fiberType, block)
-      fiberCache.setOriginByteArray(bytes)
-      fiberCache
-    }
-  }
-
-  /**
-   * Used by IndexFile
-   */
-  def toIndexFiberCache(in: FSDataInputStream, position: Long, length: Int): FiberCache = {
-    val bytes = new Array[Byte](length)
-    in.readFully(position, bytes)
-    toFiberCache(FiberType.INDEX, bytes)
-  }
-
-  /**
-   * Used by IndexFile. For decompressed data
-   */
-  def toIndexFiberCache(bytes: Array[Byte]): FiberCache = {
-    toFiberCache(FiberType.INDEX, bytes)
-  }
-
-  /**
-   * Used by OapDataFile since we need to parse the raw data in on-heap memory before put it into
-   * off-heap memory
-   */
-  def toDataFiberCache(bytes: Array[Byte]): FiberCache = {
-    toFiberCache(FiberType.DATA, bytes)
-  }
-
-  def getEmptyDataFiberCache(length: Long): FiberCache = {
-    FiberCache(FiberType.DATA, allocateFiberMemory(FiberType.DATA, length))
   }
 
   def releaseIndexCache(indexName: String): Unit = {
@@ -220,7 +203,7 @@ private[sql] class FiberCacheManager(
   }
 
   def isDcpmmUsed(): Boolean = {
-    cacheAllocator.isDcpmmUsed()
+    memoryManager.isDcpmmUsed()
   }
 
   def isNeedWaitForFree(): Boolean = {
@@ -229,7 +212,7 @@ private[sql] class FiberCacheManager(
         s"${OapRuntime.getOrCreate.fiberCacheManager.dcpmmWaitingThreshold}, " +
         s"cache guardian pending size: " +
         s"${OapRuntime.getOrCreate.fiberCacheManager.pendingOccupiedSize}")
-    isDcpmmUsed() &&
+    memoryManager.isDcpmmUsed() &&
       (OapRuntime.getOrCreate.fiberCacheManager.pendingOccupiedSize >
       OapRuntime.getOrCreate.fiberCacheManager.dcpmmWaitingThreshold)
   }
@@ -237,6 +220,13 @@ private[sql] class FiberCacheManager(
   def releaseFiber(fiber: FiberId): Unit = {
     if (cacheBackend.getIfPresent(fiber) != null) {
       cacheBackend.invalidate(fiber)
+    }
+  }
+
+  // Only used by test suite
+  private[filecache] def enableGuavaCacheSeparation(): Unit = {
+    if (cacheBackend.isInstanceOf[GuavaOapCache]) {
+      cacheBackend.asInstanceOf[GuavaOapCache].enableCacheSeparation()
     }
   }
 
@@ -275,9 +265,6 @@ private[sql] class FiberCacheManager(
   def cacheSize: Long = cacheBackend.cacheSize
 
   def cacheCount: Long = cacheBackend.cacheCount
-
-  // Get count of data cache, used by test suite
-  private[oap] def dataCacheCount: Long = cacheBackend.dataCacheCount
 
   // Used by test suite
   private[filecache] def pendingCount: Int = cacheBackend.pendingFiberCount

@@ -18,7 +18,6 @@
 package org.apache.spark.sql.execution.datasources.oap.index
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
-import java.util.Properties
 
 import scala.util.Random
 
@@ -105,7 +104,7 @@ class BTreeRecordReaderWriterV2Suite extends SharedOapContext {
         0,
         0,
         new TaskMemoryManager(new TestMemoryManager(conf), 0),
-        new Properties,
+        null,
         MetricsSystem.createMetricsSystem(
           "BTreeRecordReaderWriterSuiteV2",
           conf,

@@ -420,8 +420,7 @@ class FilterSuite extends QueryTest with SharedOapContext with BeforeAndAfterEac
 
       val fs = new Path(currentPath).getFileSystem(new Configuration())
       val tablePath = sqlContext.conf.warehousePath + "/t_refresh_parquet/"
-      // here the parquet file changed from 1 to 2, so the index file changed to 2
-      assert(fs.globStatus(new Path(tablePath + "b=1/*.index")).length == 2)
+      assert(fs.globStatus(new Path(tablePath + "b=1/*.index")).length == 1)
       assert(fs.globStatus(new Path(tablePath + "b=2/*.index")).length == 2)
       assert(fs.globStatus(new Path(tablePath + "b=3/*.index")).length == 0)
 
@@ -540,8 +539,7 @@ class FilterSuite extends QueryTest with SharedOapContext with BeforeAndAfterEac
 
       val fs = new Path(currentPath).getFileSystem(new Configuration())
       val tablePath = sqlContext.conf.warehousePath + "/t_refresh_orc/"
-      // here the parquet file changed from 1 to 2, so the index file changed to 2
-      assert(fs.globStatus(new Path(tablePath + "b=1/*.index")).length == 2)
+      assert(fs.globStatus(new Path(tablePath + "b=1/*.index")).length == 1)
       assert(fs.globStatus(new Path(tablePath + "b=2/*.index")).length == 2)
       assert(fs.globStatus(new Path(tablePath + "b=3/*.index")).length == 0)
 
@@ -660,8 +658,7 @@ class FilterSuite extends QueryTest with SharedOapContext with BeforeAndAfterEac
 
       val fs = new Path(currentPath).getFileSystem(new Configuration())
       val tablePath = sqlContext.conf.warehousePath + "/t_refresh/"
-      // here the parquet file changed from 1 to 2, so the index file changed to 2
-      assert(fs.globStatus(new Path(tablePath + "b=1/*.index")).length == 2)
+      assert(fs.globStatus(new Path(tablePath + "b=1/*.index")).length == 1)
       assert(fs.globStatus(new Path(tablePath + "b=2/*.index")).length == 2)
       assert(fs.globStatus(new Path(tablePath + "b=3/*.index")).length == 0)
 
