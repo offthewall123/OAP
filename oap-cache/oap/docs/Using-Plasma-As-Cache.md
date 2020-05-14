@@ -1,15 +1,15 @@
 # OAP- How to use Plasma as cache
 ## Introduction
-- OAP use Plasma as a node-level external cache service, the benefit of using external cache is data could be shared across process boundaries. [Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performance shared-memory object store, it's a component of [Apache Arrow](https://github.com/apache/arrow). We have modified Plasma to support Intel Optane PMem, and open source on [Intel-bigdata Arrow](https://github.com/Intel-bigdata/arrow/tree/oap-master) repo. Plasma cache Architecture shown as following figure. A Spark executor contains one or more Plasma client, clients communicate with Plasma Store server via unix domain socket on local node, data can be shared through shared memory across multi executors. Data will be cached in shared memory first, and plasma store will evict data to Intel Optane PMem since PMem has larger capacity.   
+- OAP use Plasma as a node-level external cache service, the benefit of using external cache is data can be shared across process boundaries. [Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performance shared-memory object store, it's a component of [Apache Arrow](https://github.com/apache/arrow). We have modified Plasma to support Intel Optane PMem, and open source on [Intel-bigdata Arrow](https://github.com/Intel-bigdata/arrow/tree/oap-master) repo. Plasma cache Architecture shown as following figure. A Spark executor contains one or more Plasma client, clients communicate with Plasma Store server via unix domain socket on local node, data can be shared through shared memory across multi executors. Data will be cached in shared memory first, and plasma store will evict data to Intel Optane PMem since PMem has larger capacity.   
  
 ![Plasma_Architecture](./image/plasma.png)
 
 
 ## How to build
 ### what you need 
-To use optimized Plasma cache with OAP, you need following components:
-    1. libarrow.so, libplasma.so, libplasma_jni.so: dynamic libraries, will be used in plasma client.
-    2. plasma-store-server: executable file, plasma cache service.
+To use optimized Plasma cache with OAP, you need following components:  
+    1. libarrow.so, libplasma.so, libplasma_jni.so: dynamic libraries, will be used in plasma client.   
+    2. plasma-store-server: executable file, plasma cache service.  
     3. arrow-plasma-0.17.0.jar: will be used when compile oap and spark runtime also need it. 
     
     i and ii will provided as rpm package, these can be download on link xxx, or try `yum install intel-arrow-0.17.0`   
@@ -41,8 +41,6 @@ cd $ARROW_REPO_DIR/java
 mvn clean -q -DskipTests install
 ```
 
-    
-
 ## How to Run Spark-sql with Plasma
 
 ### config files:
@@ -69,12 +67,24 @@ spark.sql.oap.cache.external.client.pool.size              10
 
 
 #### start plasma service manually
- start plasma service on every node.    
+ you can start plasma service on every node as following command
+```
+plasma-store-server -m 30000000000 -s /tmp/plasmaStore -e vmemcache://size:49000000000 &
+```    
  plasma config parameters:  
+ 
+```
+-m  how much Bytes share memory plasma will use
+-s  Unix Domain sockcet path
+-e  using external store
+    vmemcache: using vmemcahe as external store
+    size: how much Bytes external store will use on pmem per numa node
+```
 
 #### using yarn start plamsa service
  we can use yarn(hadoop version >= 3.1) to start plasma service, you should provide a yaml file like xxx.
- 
+
+### start Saprk-sql and run workload.
  
   
   

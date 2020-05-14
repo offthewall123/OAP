@@ -205,20 +205,7 @@ Above file systems are generated for 2 numa nodes, which can be checked by "numa
      make package
      sudo rpm -i libvmemcache*.rpm
 ```
-- OAP use Plasma as a node-level external cache service, the benefit of using external cache is data could be shared across process boundaries. [Plasma](http://arrow.apache.org/blog/2017/08/08/plasma-in-memory-object-store/) is a high-performance shared-memory object store, it's a component of [Apache Arrow](https://github.com/apache/arrow). We have modified Plasma to support DCPMM, and open source on [Intel-bigdata Arrow](https://github.com/Intel-bigdata/arrow/tree/oap-master) repo. You can run follow commands to install libarrow.so, libplasma.so, libplasma_java.so, plasma-store-server, arrow-plasma.jar to your machine:
-```
-    git clone https://github.com/Intel-bigdata/arrow.git
-    cd arrow
-    git checkout oap-master
-    cd cpp
-    mkdir release 
-    cd release
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g -O3" -DCMAKE_CXX_FLAGS="-g -O3" -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED ..
-    make -j$(nproc)
-    sudo make install -j$(nproc)
-    cd ../../java
-    mvn clean -q -DskipTests install
-``` 
+- OAP use Plasma as a node-level external cache service, the benefit of using external cache is data can be shared across process boundaries. You can reference [Using-Plasma-As-Cache](./Using-Plasma-As-Cache.md).
 
 #### Configure for NUMA
 To achieve the optimum performance, we need to configure NUMA for binding executor to NUMA node and try access the right DCPMM device on the same NUMA node. You need install numactl on each worker node. For example, on CentOS, run following command to install numactl.
@@ -339,26 +326,7 @@ Note: If "PendingFiber Size" (on spark web-UI OAP page) is large, or some tasks 
 
 #### Use External cache strategy
 
-External cache strategy is implemented based on arrow/plasma library. To use this strategy, follow [prerequisites](#prerequisites-1) to set up DCPMM hardware and plasma library correctly, and start Plasma service on nodes, then refer below configurations to apply external cache strategy in your workload.
-
-For Parquet data format, provides the following conf options:
-
-```
-spark.sql.oap.parquet.data.cache.enable                    true 
-spark.oap.cache.strategy                                   external
-spark.sql.oap.cache.guardian.memory.size                   10g      # according to your cluster
-spark.sql.oap.cache.external.client.pool.size              10
-```
-
-For Orc data format, provides following conf options:
-
-```
-spark.sql.orc.copyBatchToSpark                             true 
-spark.sql.oap.orc.data.cache.enable                        true 
-spark.oap.cache.strategy                                   external 
-spark.sql.oap.cache.guardian.memory.size                   10g      # according to your cluster
-spark.sql.oap.cache.external.client.pool.size              10
-```
+Refer [how-to-use-plasma](./Using-Plasma-As-Cache.md#How to Run Spark-sql with Plasma).
 
 
 ### Enabling Index/Data cache separation
