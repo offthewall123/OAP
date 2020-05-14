@@ -51,21 +51,18 @@ abstract class FileFormatDataWriter(
   protected val statsTrackers: Seq[WriteTaskStatsTracker] =
     description.statsTrackers.map(_.newTaskInstance())
 
-  protected def releaseResources(): Seq[WriteResult] = {
-    var writeResults: Seq[WriteResult] = Nil
+  protected def releaseResources(): Unit = {
     if (currentWriter != null) {
       try {
         currentWriter.close()
-        writeResults = writeResults :+ currentWriter.writeStatus()
       } finally {
         currentWriter = null
       }
     }
-    writeResults
   }
 
   /** Writes a record */
-  def write(record: InternalRow): Seq[WriteResult]
+  def write(record: InternalRow): Unit
 
   /**
    * Returns the summary of relative information which
@@ -73,12 +70,12 @@ abstract class FileFormatDataWriter(
    * to the driver and used to update the catalog. Other information will be sent back to the
    * driver too and used to e.g. update the metrics in UI.
    */
-  def commit(writeResult: Seq[WriteResult]): WriteTaskResult = {
-    val allWriteResults = writeResult ++ releaseResources()
+  def commit(): WriteTaskResult = {
+    releaseResources()
     val summary = ExecutedWriteSummary(
       updatedPartitions = updatedPartitions.toSet,
       stats = statsTrackers.map(_.getFinalStats()))
-    WriteTaskResult(committer.commitTask(taskAttemptContext), summary, allWriteResults)
+    WriteTaskResult(committer.commitTask(taskAttemptContext), summary)
   }
 
   def abort(): Unit = {
@@ -96,7 +93,7 @@ class EmptyDirectoryDataWriter(
     taskAttemptContext: TaskAttemptContext,
     committer: FileCommitProtocol
 ) extends FileFormatDataWriter(description, taskAttemptContext, committer) {
-  override def write(record: InternalRow): Seq[WriteResult] = { Nil}
+  override def write(record: InternalRow): Unit = {}
 }
 
 /** Writes data to a single directory (used for non-dynamic-partition writes). */
@@ -110,10 +107,9 @@ class SingleDirectoryDataWriter(
   // Initialize currentWriter and statsTrackers
   newOutputWriter()
 
-  private def newOutputWriter(): Seq[WriteResult] = {
-    var writeResults: Seq[WriteResult] = Nil
+  private def newOutputWriter(): Unit = {
     recordsInFile = 0
-    writeResults = writeResults ++ releaseResources()
+    releaseResources()
 
     val ext = description.outputWriterFactory.getFileExtension(taskAttemptContext)
     val currentPath = committer.newTaskTempFile(
@@ -127,23 +123,20 @@ class SingleDirectoryDataWriter(
       context = taskAttemptContext)
 
     statsTrackers.foreach(_.newFile(currentPath))
-    writeResults
   }
 
-  override def write(record: InternalRow): Seq[WriteResult] = {
-    var writeResults: Seq[WriteResult] = Nil
+  override def write(record: InternalRow): Unit = {
     if (description.maxRecordsPerFile > 0 && recordsInFile >= description.maxRecordsPerFile) {
       fileCounter += 1
       assert(fileCounter < MAX_FILE_COUNTER,
         s"File counter $fileCounter is beyond max value $MAX_FILE_COUNTER")
 
-      writeResults = newOutputWriter()
+      newOutputWriter()
     }
 
     currentWriter.write(record)
     statsTrackers.foreach(_.newRow(record))
     recordsInFile += 1
-    writeResults
   }
 }
 
@@ -218,13 +211,11 @@ class DynamicPartitionDataWriter(
    *                        belong to
    * @param bucketId the bucket which all tuples being written by this `OutputWriter` belong to
    */
-  private def newOutputWriter(partitionValues: Option[InternalRow],
-      bucketId: Option[Int]): Seq[WriteResult] = {
-    var writeResults: Seq[WriteResult] = Nil
+  private def newOutputWriter(partitionValues: Option[InternalRow], bucketId: Option[Int]): Unit = {
     recordsInFile = 0
-    writeResults = writeResults ++ releaseResources()
+    releaseResources()
 
-    val partDir: Option[String] = partitionValues.map(getPartitionPath(_))
+    val partDir = partitionValues.map(getPartitionPath(_))
     partDir.foreach(updatedPartitions.add)
 
     val bucketIdStr = bucketId.map(BucketingUtils.bucketIdToString).getOrElse("")
@@ -233,11 +224,8 @@ class DynamicPartitionDataWriter(
     val ext = f"$bucketIdStr.c$fileCounter%03d" +
       description.outputWriterFactory.getFileExtension(taskAttemptContext)
 
-    val (customPath, partitionString) = partDir match {
-      case Some(dir) =>
-        (description.customPartitionLocations.get(PartitioningUtils.parsePathFragment(dir)), dir)
-      case _ =>
-        (None, "")
+    val customPath = partDir.flatMap { dir =>
+      description.customPartitionLocations.get(PartitioningUtils.parsePathFragment(dir))
     }
     val currentPath = if (customPath.isDefined) {
       committer.newTaskTempFileAbsPath(taskAttemptContext, customPath.get, ext)
@@ -251,14 +239,11 @@ class DynamicPartitionDataWriter(
       context = taskAttemptContext)
 
     statsTrackers.foreach(_.newFile(currentPath))
-    currentWriter.setPartitionString(partitionString)
-    writeResults
   }
 
-  override def write(record: InternalRow): Seq[WriteResult] = {
+  override def write(record: InternalRow): Unit = {
     val nextPartitionValues = if (isPartitioned) Some(getPartitionValues(record)) else None
     val nextBucketId = if (isBucketed) Some(getBucketId(record)) else None
-    var writeResults: Seq[WriteResult] = Nil
 
     if (currentPartionValues != nextPartitionValues || currentBucketId != nextBucketId) {
       // See a new partition or bucket - write to a new partition dir (or a new bucket file).
@@ -272,7 +257,7 @@ class DynamicPartitionDataWriter(
       }
 
       fileCounter = 0
-      writeResults = writeResults ++ newOutputWriter(currentPartionValues, currentBucketId)
+      newOutputWriter(currentPartionValues, currentBucketId)
     } else if (description.maxRecordsPerFile > 0 &&
       recordsInFile >= description.maxRecordsPerFile) {
       // Exceeded the threshold in terms of the number of records per file.
@@ -281,13 +266,12 @@ class DynamicPartitionDataWriter(
       assert(fileCounter < MAX_FILE_COUNTER,
         s"File counter $fileCounter is beyond max value $MAX_FILE_COUNTER")
 
-      writeResults = writeResults ++ newOutputWriter(currentPartionValues, currentBucketId)
+      newOutputWriter(currentPartionValues, currentBucketId)
     }
     val outputRow = getOutputRow(record)
     currentWriter.write(outputRow)
     statsTrackers.foreach(_.newRow(outputRow))
     recordsInFile += 1
-    writeResults
   }
 }
 
@@ -316,10 +300,7 @@ class WriteJobDescription(
 }
 
 /** The result of a successful write task. */
-case class WriteTaskResult(
-    commitMsg: TaskCommitMessage,
-    summary: ExecutedWriteSummary,
-    writeResults: Seq[WriteResult])
+case class WriteTaskResult(commitMsg: TaskCommitMessage, summary: ExecutedWriteSummary)
 
 /**
  * Wrapper class for the metrics of writing data out.
