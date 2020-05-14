@@ -27,15 +27,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.orc.StripeInformation;
 import org.apache.parquet.hadoop.metadata.IndexedStripeMeta;
-import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntArrayList;
-import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntListIterator;
 import org.apache.spark.sql.execution.datasources.oap.filecache.VectorDataFiberId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache;
 import org.apache.spark.sql.oap.OapRuntime$;
+import parquet.it.unimi.dsi.fastutil.ints.IntArrayList;
+import parquet.it.unimi.dsi.fastutil.ints.IntList;
+import parquet.it.unimi.dsi.fastutil.ints.IntListIterator;
 
 public class IndexedOrcCacheReader extends OrcCacheReader {
   private static final Logger LOG = LoggerFactory.getLogger(IndexedOrcCacheReader.class);
