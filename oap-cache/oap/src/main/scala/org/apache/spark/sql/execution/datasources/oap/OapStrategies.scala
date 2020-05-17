@@ -48,17 +48,17 @@ trait OapStrategy extends Strategy with Logging {
    * TODO: remove OAP irrelevant code.
    */
   def createOapFileScanPlan(
-      projects: Seq[NamedExpression],
-      filters: Seq[Expression],
-      l: LogicalPlan,
-      _fsRelation: HadoopFsRelation,
-      table: Option[CatalogTable],
-      oapOption: Map[String, String],
-      indexHint: Seq[Expression],
-      indexRequirements: Seq[IndexType]): Option[SparkPlan] = {
+                             projects: Seq[NamedExpression],
+                             filters: Seq[Expression],
+                             l: LogicalPlan,
+                             _fsRelation: HadoopFsRelation,
+                             table: Option[CatalogTable],
+                             oapOption: Map[String, String],
+                             indexHint: Seq[Expression],
+                             indexRequirements: Seq[IndexType]): Option[SparkPlan] = {
     val conf = SparkSession.getActiveSession.get.sessionState.conf
     if (!conf.getConf(OapConf.OAP_ENABLE_OPTIMIZATION_STRATEGIES) ||
-        conf.getConf(OapConf.OAP_ENABLE_EXECUTOR_INDEX_SELECTION)) {
+      conf.getConf(OapConf.OAP_ENABLE_EXECUTOR_INDEX_SELECTION)) {
       // If executor index selection (spark.sql.oap.oindex.eis.enabled) is enabled,
       // oapStrategies does not work because exeutor may skip the index scan.
       return None
@@ -108,7 +108,7 @@ trait OapStrategy extends Strategy with Logging {
 
         if (fileFormat.hasAvailableIndex(normalizedIndexHint, indexRequirements)) {
           val dataColumns = l.resolve(
-              _fsRelation.dataSchema, _fsRelation.sparkSession.sessionState.analyzer.resolver)
+            _fsRelation.dataSchema, _fsRelation.sparkSession.sessionState.analyzer.resolver)
 
           // Partition keys are not available in the statistics of the files.
           val dataFilters = normalizedIndexHint.filter(_.references.intersect(partitionSet).isEmpty)
@@ -136,7 +136,6 @@ trait OapStrategy extends Strategy with Logging {
             outputAttributes,
             outputSchema,
             partitionKeyFilters.toSeq,
-            None, // TODO in the future we need to consider the bucketSet parameter
             dataFilters,
             table.map(_.identifier))
 
@@ -204,9 +203,9 @@ object OapSortLimitStrategy extends OapStrategy {
   }
 
   def calcChildPlan(
-      child: LogicalPlan,
-      limit: Int,
-      order: Seq[SortOrder]): SparkPlan = child match {
+                     child: LogicalPlan,
+                     limit: Int,
+                     order: Seq[SortOrder]): SparkPlan = child match {
     case PhysicalOperation(projectList, filters,
     relation : LogicalRelation) =>
       val filterAttributes = AttributeSet(ExpressionSet(filters))
@@ -273,8 +272,8 @@ object OapSemiJoinStrategy extends OapStrategy {
   }
 
   def calcChildPlan(
-      child: LogicalPlan,
-      order: Seq[SortOrder]): SparkPlan = child match {
+                     child: LogicalPlan,
+                     order: Seq[SortOrder]): SparkPlan = child match {
     case PhysicalOperation(projectList, filters,
     relation : LogicalRelation) =>
       val filterAttributes = AttributeSet(ExpressionSet(filters))
@@ -318,11 +317,9 @@ object OapSemiJoinStrategy extends OapStrategy {
 object OapGroupAggregateStrategy extends OapStrategy {
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
     case PhysicalAggregation(
-    groupingExpressions, aggregateExpressions, resultExpressions, child) if aggregateExpressions
-      .forall(_.isInstanceOf[AggregateExpression]) =>
-      val aggExpressions = aggregateExpressions.map(_.asInstanceOf[AggregateExpression])
+    groupingExpressions, aggregateExpressions, resultExpressions, child) =>
       val (functionsWithDistinct, _) =
-        aggExpressions.partition(_.isDistinct)
+        aggregateExpressions.partition(_.isDistinct)
       if (functionsWithDistinct.map(_.aggregateFunction.children).distinct.length > 1) {
         // This is a sanity check. We should not reach here when we have multiple distinct
         // column sets. Our MultipleDistinctRewriter should take care this case.
@@ -331,7 +328,7 @@ object OapGroupAggregateStrategy extends OapStrategy {
       }
 
       val aggregateOperator =
-        if (aggExpressions.map(_.aggregateFunction).exists(
+        if (aggregateExpressions.map(_.aggregateFunction).exists(
           !AggregateFunctionAdapter.supportsPartial(_))) {
           if (functionsWithDistinct.nonEmpty) {
             sys.error("Distinct columns cannot exist in Aggregate operator containing " +
@@ -345,10 +342,10 @@ object OapGroupAggregateStrategy extends OapStrategy {
           if (groupingExpressions.size == 1) {
             OapAggUtils.planAggregateWithoutDistinct(
               groupingExpressions,
-              aggExpressions,
+              aggregateExpressions,
               resultExpressions,
               calcChildPlan(
-                groupingExpressions, aggExpressions, resultExpressions, child))
+                groupingExpressions, aggregateExpressions, resultExpressions, child))
           } else Nil
         } else {
           // TODO: support distinct in future.
@@ -359,10 +356,10 @@ object OapGroupAggregateStrategy extends OapStrategy {
   }
 
   private def calcChildPlan(
-      groupExpressions: Seq[NamedExpression],
-      aggExpressions: Seq[AggregateExpression],
-      resultExpressions: Seq[NamedExpression],
-      child : LogicalPlan) : SparkPlan = child match {
+                             groupExpressions: Seq[NamedExpression],
+                             aggExpressions: Seq[AggregateExpression],
+                             resultExpressions: Seq[NamedExpression],
+                             child : LogicalPlan) : SparkPlan = child match {
     case PhysicalOperation(projectList, filters,
     relation : LogicalRelation) =>
       val filterAttributes = AttributeSet(ExpressionSet(filters))
@@ -429,10 +426,10 @@ abstract class OapFileScanExec extends UnaryExecNode with CodegenSupport {
 }
 
 case class OapOrderLimitFileScanExec(
-    limit: Int,
-    sortOrder: Seq[SortOrder],
-    projectList: Seq[NamedExpression],
-    child: SparkPlan) extends OapFileScanExec {
+                                      limit: Int,
+                                      sortOrder: Seq[SortOrder],
+                                      projectList: Seq[NamedExpression],
+                                      child: SparkPlan) extends OapFileScanExec {
 
   override def simpleString: String = {
     val orderByString = Utils.truncatedString(sortOrder, "[", ",", "]")
@@ -443,9 +440,9 @@ case class OapOrderLimitFileScanExec(
 }
 
 case class OapDistinctFileScanExec(
-    scanNumber: Int,
-    projectList: Seq[NamedExpression],
-    child: SparkPlan) extends OapFileScanExec {
+                                    scanNumber: Int,
+                                    projectList: Seq[NamedExpression],
+                                    child: SparkPlan) extends OapFileScanExec {
 
   override def simpleString: String = {
     val outputString = Utils.truncatedString(output, "[", ",", "]")
@@ -455,9 +452,9 @@ case class OapDistinctFileScanExec(
 }
 
 case class OapAggregationFileScanExec(
-    aggExpression: Seq[AggregateExpression],
-    projectList: Seq[NamedExpression],
-    child: SparkPlan) extends OapFileScanExec {
+                                       aggExpression: Seq[AggregateExpression],
+                                       projectList: Seq[NamedExpression],
+                                       child: SparkPlan) extends OapFileScanExec {
 
   override def simpleString: String = {
     val outputString = Utils.truncatedString(output, "[", ",", "]")

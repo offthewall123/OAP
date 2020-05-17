@@ -22,23 +22,20 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression}
 import org.apache.spark.sql.execution.FileSourceScanExec
 import org.apache.spark.sql.execution.datasources.HadoopFsRelation
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.util.collection.BitSet
 
 object FileSourceScanExecAdapter {
   def createFileSourceScanExec(
-      relation: HadoopFsRelation,
-      output: Seq[Attribute],
-      requiredSchema: StructType,
-      partitionFilters: Seq[Expression],
-      optionalBucketSets: Option[BitSet],
-      dataFilters: Seq[Expression],
-      metastoreTableIdentifier: Option[TableIdentifier]): FileSourceScanExec = {
+                                relation: HadoopFsRelation,
+                                output: Seq[Attribute],
+                                requiredSchema: StructType,
+                                partitionFilters: Seq[Expression],
+                                dataFilters: Seq[Expression],
+                                metastoreTableIdentifier: Option[TableIdentifier]): FileSourceScanExec = {
     FileSourceScanExec(
       relation,
       output,
       requiredSchema,
       partitionFilters,
-      optionalBucketSets,
       dataFilters,
       metastoreTableIdentifier)
   }

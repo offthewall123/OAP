@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
-import org.apache.parquet.bytes.BytesInput
 import org.apache.parquet.column.Dictionary
 import org.apache.parquet.column.values.deltastrings.DeltaByteArrayReader
 import org.apache.parquet.column.values.dictionary.DictionaryValuesReader
@@ -33,9 +32,9 @@ private[oap] trait DataFiberParser {
 
 object DataFiberParser {
   def apply(
-      encoding: Encoding,
-      meta: OapDataFileMeta,
-      dataType: DataType): DataFiberParser = {
+             encoding: Encoding,
+             meta: OapDataFileMeta,
+             dataType: DataType): DataFiberParser = {
 
     encoding match {
       case Encoding.PLAIN => PlainDataFiberParser(meta)
@@ -48,10 +47,10 @@ object DataFiberParser {
 object DictionaryBasedDataFiberParser {
 
   def apply(
-      encoding: Encoding,
-      meta: OapDataFileMeta,
-      dictionary: Dictionary,
-      dataType: DataType): DataFiberParser = {
+             encoding: Encoding,
+             meta: OapDataFileMeta,
+             dictionary: Dictionary,
+             dataType: DataType): DataFiberParser = {
     encoding match {
       case Encoding.PLAIN_DICTIONARY => PlainDictionaryFiberParser(meta, dictionary, dataType)
       case _ => sys.error(s"Not support encoding type: $encoding")
@@ -60,14 +59,14 @@ object DictionaryBasedDataFiberParser {
 }
 
 private[oap] case class PlainDataFiberParser(
-    meta: OapDataFileMeta) extends DataFiberParser{
+                                              meta: OapDataFileMeta) extends DataFiberParser{
 
   override def parse(bytes: Array[Byte], rowCount: Int): Array[Byte] = bytes
 }
 
 private[oap] case class DeltaByteArrayDataFiberParser(
-    meta: OapDataFileMeta,
-    dataType: DataType) extends DataFiberParser{
+                                                       meta: OapDataFileMeta,
+                                                       dataType: DataType) extends DataFiberParser{
 
   override def parse(bytes: Array[Byte], rowCount: Int): Array[Byte] = {
 
@@ -94,9 +93,7 @@ private[oap] case class DeltaByteArrayDataFiberParser(
         Platform.copyMemory(bytes, Platform.BYTE_ARRAY_OFFSET,
           fiberBytes, Platform.LONG_ARRAY_OFFSET, bits.toLongArray().length * 8)
 
-        val inputStream = BytesInput.from(bytes).toInputStream
-        inputStream.skipFully(bitsDataLength + 4)
-        valuesReader.initFromPage(rowCount, inputStream)
+        valuesReader.initFromPage(rowCount, bytes, bitsDataLength + 4)
 
         (0 until rowCount).foreach{i =>
           if (bits.get(i)) {
@@ -117,9 +114,9 @@ private[oap] case class DeltaByteArrayDataFiberParser(
 }
 
 private[oap] case class PlainDictionaryFiberParser(
-    meta: OapDataFileMeta,
-    dictionary: Dictionary,
-    dataType: DataType) extends DataFiberParser {
+                                                    meta: OapDataFileMeta,
+                                                    dictionary: Dictionary,
+                                                    dataType: DataType) extends DataFiberParser {
 
   override def parse(bytes: Array[Byte], rowCount: Int): Array[Byte] = {
     val valuesReader = new DictionaryValuesReader(dictionary)
@@ -131,9 +128,7 @@ private[oap] case class PlainDictionaryFiberParser(
     val baseOffset = Platform.BYTE_ARRAY_OFFSET + bits.toLongArray().length * 8
     val bitsDataLength = bits.toLongArray().length * 8
 
-    val inputStream = BytesInput.from(bytes).toInputStream
-    inputStream.skipFully(bits.toLongArray().length * 8 + 4)
-    valuesReader.initFromPage(rowCount, inputStream)
+    valuesReader.initFromPage(rowCount, bytes, bits.toLongArray().length * 8 + 4)
 
     dataType match {
       case IntegerType =>
