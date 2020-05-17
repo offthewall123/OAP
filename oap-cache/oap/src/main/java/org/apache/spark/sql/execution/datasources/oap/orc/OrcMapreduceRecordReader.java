@@ -23,17 +23,18 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.orc.*;
-import org.apache.orc.impl.DataReaderProperties;
-import org.apache.orc.impl.ReaderImpl;
-import org.apache.orc.impl.RecordReaderBinaryCacheImpl;
-import org.apache.orc.impl.RecordReaderBinaryCacheUtils;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.orc.OrcConf;
+import org.apache.orc.OrcFile;
+import org.apache.orc.Reader;
+import org.apache.orc.RecordReader;
+import org.apache.orc.TypeDescription;
 import org.apache.orc.mapred.OrcMapredRecordReader;
 import org.apache.orc.mapred.OrcStruct;
 import org.apache.orc.storage.ql.exec.vector.VectorizedRowBatch;
-
-import org.apache.spark.sql.internal.oap.OapConf$;
 
 /**
  * This record reader is a copy of OrcMapreduceRecordReader with minor changes
@@ -44,7 +45,7 @@ import org.apache.spark.sql.internal.oap.OapConf$;
  * @param <V> the root type of the file
  */
 public class OrcMapreduceRecordReader<V extends WritableComparable>
-    implements org.apache.spark.sql.execution.datasources.RecordReader<V> {
+        extends org.apache.hadoop.mapreduce.RecordReader<NullWritable, V> {
 
   protected final V row;
   protected final TypeDescription schema;
@@ -53,42 +54,17 @@ public class OrcMapreduceRecordReader<V extends WritableComparable>
   protected int rowInBatch;
 
   public OrcMapreduceRecordReader(Path file, Configuration conf)
-      throws IOException {
+          throws IOException {
     FileSystem fileSystem = file.getFileSystem(conf);
     long length = fileSystem.getFileStatus(file).getLen();
 
     Reader fileReader = OrcFile.createReader(file,
-        OrcFile.readerOptions(conf)
-            .maxLength(OrcConf.MAX_FILE_LENGTH.getLong(conf)));
+            OrcFile.readerOptions(conf)
+                    .maxLength(OrcConf.MAX_FILE_LENGTH.getLong(conf)));
     Reader.Options options = org.apache.orc.mapred.OrcInputFormat.buildOptions(conf,
-        fileReader, 0, length);
+            fileReader, 0, length);
 
-    boolean binaryCacheEnabled = conf
-      .getBoolean(OapConf$.MODULE$.OAP_ORC_BINARY_DATA_CACHE_ENABLED().key(), false);
-    if (binaryCacheEnabled) {
-      Boolean zeroCopy = options.getUseZeroCopy();
-      if (zeroCopy == null) {
-        zeroCopy = OrcConf.USE_ZEROCOPY.getBoolean(conf);
-      }
-      DataReader dataReader = RecordReaderBinaryCacheUtils.createBinaryCacheDataReader(
-              DataReaderProperties.builder()
-                      .withBufferSize(fileReader.getCompressionSize())
-                      .withCompression(fileReader.getCompressionKind())
-                      .withFileSystem(fileSystem)
-                      .withPath(file)
-                      .withTypeCount(fileReader.getTypes().size())
-                      .withZeroCopy(zeroCopy)
-                      .withMaxDiskRangeChunkLimit(OrcConf
-                        .ORC_MAX_DISK_RANGE_CHUNK_LIMIT.getInt(conf))
-                      .build());
-      options.dataReader(dataReader);
-
-      this.batchReader = new RecordReaderBinaryCacheImpl((ReaderImpl)fileReader, options);
-
-    } else {
-      this.batchReader = fileReader.rows(options);
-    }
-
+    this.batchReader = fileReader.rows(options);
     if (options.getSchema() == null) {
       schema = fileReader.getSchema();
     } else {
@@ -118,7 +94,8 @@ public class OrcMapreduceRecordReader<V extends WritableComparable>
   }
 
   @Override
-  public void initialize() throws IOException, InterruptedException {
+  public void initialize(InputSplit inputSplit,
+                         TaskAttemptContext taskAttemptContext) {
     // nothing required
   }
 
@@ -131,7 +108,7 @@ public class OrcMapreduceRecordReader<V extends WritableComparable>
       int numberOfChildren = children.size();
       for(int i=0; i < numberOfChildren; ++i) {
         result.setFieldValue(i, OrcMapredRecordReader.nextValue(batch.cols[i], rowInBatch,
-            children.get(i), result.getFieldValue(i)));
+                children.get(i), result.getFieldValue(i)));
       }
     } else {
       OrcMapredRecordReader.nextValue(batch.cols[0], rowInBatch, schema, row);
@@ -149,7 +126,17 @@ public class OrcMapreduceRecordReader<V extends WritableComparable>
   }
 
   @Override
+  public NullWritable getCurrentKey() throws IOException, InterruptedException {
+    return NullWritable.get();
+  }
+
+  @Override
   public V getCurrentValue() throws IOException, InterruptedException {
     return row;
+  }
+
+  @Override
+  public float getProgress() throws IOException {
+    return batchReader.getProgress();
   }
 }

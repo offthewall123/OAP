@@ -62,36 +62,35 @@ import org.apache.spark.util.CompletionIterator
  * @param configuration hadoop configuration
  */
 private[oap] case class OrcDataFile(
-    path: String,
-    schema: StructType,
-    configuration: Configuration) extends DataFile {
+                                     path: String,
+                                     schema: StructType,
+                                     configuration: Configuration) extends DataFile {
 
   private var context: OrcDataFileContext = _
-  private lazy val filePath: Path = new Path(path)
-  private lazy val orcDataCacheEnable =
+  private val filePath: Path = new Path(path)
+  private val orcDataCacheEnable =
     configuration.getBoolean(OapConf.OAP_ORC_DATA_CACHE_ENABLED.key,
       OapConf.OAP_ORC_DATA_CACHE_ENABLED.defaultValue.get)
-  lazy val meta =
+  val meta =
     OapRuntime.getOrCreate.dataFileMetaCacheManager.get(this).asInstanceOf[OrcDataFileMeta]
-//  meta.getOrcFileReader()
-  private lazy val fileReader: Reader = {
+  //  meta.getOrcFileReader()
+  private val fileReader: Reader = {
     import scala.collection.JavaConverters._
-//    val meta =
-//      OapRuntime.getOrCreate.dataFileMetaCacheManager.get(this).asInstanceOf[OrcDataFileMeta]
+    //    val meta =
+    //      OapRuntime.getOrCreate.dataFileMetaCacheManager.get(this).asInstanceOf[OrcDataFileMeta]
     meta.getOrcFileReader()
   }
 
-//  recordReader = reader.rows(options)
+  //  recordReader = reader.rows(options)
 
-  lazy val reader: Reader = OrcFile.createReader(meta.path,
-    OrcFile.readerOptions(meta.configuration)
+  val reader: Reader = OrcFile.createReader(meta.path, OrcFile.readerOptions(meta.configuration)
     .maxLength(OrcConf.MAX_FILE_LENGTH.getLong(meta.configuration)).filesystem(meta.fs))
-  lazy val options: Reader.Options = OrcInputFormat.buildOptions(meta.configuration,
+  val options: Reader.Options = OrcInputFormat.buildOptions(meta.configuration,
     reader, 0, meta.length)
 
   var recordReader: RecordReaderCacheImpl = _
 
-  private lazy val inUseFiberCache = new Array[FiberCache](schema.length)
+  private val inUseFiberCache = new Array[FiberCache](schema.length)
 
   private def release(idx: Int): Unit = Option(inUseFiberCache(idx)).foreach { fiberCache =>
     fiberCache.release()
@@ -104,8 +103,8 @@ private[oap] case class OrcDataFile(
   }
 
   def iterator(
-    requiredIds: Array[Int],
-    filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
+                requiredIds: Array[Int],
+                filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
     val iterator = context.returningBatch match {
       case true =>
         // Orc Stripe size can more than Int.MaxValue,
@@ -114,8 +113,8 @@ private[oap] case class OrcDataFile(
         // TODO support cache without copyToSpark
         if (orcDataCacheEnable &&
           !meta.listStripeInformation.asScala.exists(_.getNumberOfRows > Int.MaxValue &&
-          context.copyToSpark)) {
-//          addRequestSchemaToConf(configuration, requiredIds)
+            context.copyToSpark)) {
+          //          addRequestSchemaToConf(configuration, requiredIds)
           initCacheReader(context,
             new OrcCacheReader(configuration,
               meta, this, requiredIds,
@@ -132,9 +131,9 @@ private[oap] case class OrcDataFile(
   }
 
   def iteratorWithRowIds(
-      requiredIds: Array[Int],
-      rowIds: Array[Int],
-      filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
+                          requiredIds: Array[Int],
+                          rowIds: Array[Int],
+                          filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
     if (rowIds == null || rowIds.length == 0) {
       new OapCompletionIterator(Iterator.empty, {})
     } else {
@@ -166,11 +165,8 @@ private[oap] case class OrcDataFile(
     this.context = context
 
   private def initVectorizedReader(c: OrcDataFileContext,
-      reader: OrcColumnarBatchReader) = {
-    val taskConf = new Configuration(configuration)
-    taskConf.set(OrcConf.INCLUDE_COLUMNS.getAttribute,
-      c.requestedColIds.filter(_ != -1).sorted.mkString(","))
-    reader.initialize(filePath, taskConf)
+                                   reader: OrcColumnarBatchReader) = {
+    reader.initialize(filePath, configuration)
     reader.initBatch(fileReader.getSchema, c.requestedColIds, c.requiredSchema.fields,
       c.partitionColumns, c.partitionValues)
     val iterator = new FileRecordReaderIterator(reader)
@@ -180,30 +176,65 @@ private[oap] case class OrcDataFile(
   }
 
   private def initCacheReader(c: OrcDataFileContext,
-      reader: OrcCacheReader) = {
-    reader.initialize(filePath, configuration)
-    reader.initBatch(fileReader.getSchema, c.requestedColIds, c.requiredSchema.fields,
-      c.partitionColumns, c.partitionValues)
-    val iterator = new FileRecordReaderIterator(reader)
-    // TODO need to release
-    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
-      c.requestedColIds.foreach(release)) {
-      override def close(): Unit = {
-        // To ensure if any exception happens, caches are still released after calling close()
-        inUseFiberCache.indices.foreach(release)
-        if (recordReader != null) {
-          recordReader.close()
-        }
-      }
-    }
+                              reader: OrcCacheReader) = {
+//    reader.initialize(filePath, configuration)
+//    reader.initBatch(fileReader.getSchema, c.requestedColIds, c.requiredSchema.fields,
+//      c.partitionColumns, c.partitionValues)
+//    val iterator = new FileRecordReaderIterator(reader)
+//    // TODO need to release
+//    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
+//      c.requestedColIds.foreach(release)) {
+//      override def close(): Unit = {
+//        // To ensure if any exception happens, caches are still released after calling close()
+//        inUseFiberCache.indices.foreach(release)
+//        if (recordReader != null) {
+//          recordReader.close()
+//        }
+//      }
+//    }
   }
 
   private def initRecordReader(
-      reader: OrcMapreduceRecordReader[OrcStruct]) = {
+                                reader: OrcMapreduceRecordReader[OrcStruct]) = {
     val iterator =
-      new FileRecordReaderIterator[OrcStruct](reader)
+      new FileRecordReaderIterator[OrcStruct](reader.asInstanceOf[RecordReader[_, OrcStruct]])
     new OapCompletionIterator[OrcStruct](iterator, {}) {
       override def close(): Unit = iterator.close()
+    }
+  }
+
+  private class FileRecordReaderIterator[V](private[this] var rowReader: RecordReader[_, V])
+    extends Iterator[V] with Closeable {
+    private[this] var havePair = false
+    private[this] var finished = false
+
+    override def hasNext: Boolean = {
+      if (!finished && !havePair) {
+        finished = !rowReader.nextKeyValue
+        if (finished) {
+          close()
+        }
+        havePair = !finished
+      }
+      !finished
+    }
+
+    override def next(): V = {
+      if (!hasNext) {
+        throw new java.util.NoSuchElementException("End of stream")
+      }
+      havePair = false
+      rowReader.getCurrentValue
+    }
+
+    override def close(): Unit = {
+      if (rowReader != null) {
+        try {
+          rowReader.close()
+        } finally {
+          rowReader = null
+        }
+      }
     }
   }
 

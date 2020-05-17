@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.column.page.PageReadStore;
+import org.apache.parquet.filter2.compat.FilterCompat;
 import org.apache.parquet.format.converter.ParquetMetadataConverter;
 import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.IndexedBlockMetaData;
@@ -35,16 +36,16 @@ import static org.apache.parquet.format.converter.ParquetMetadataConverter.NO_FI
 
 public class OapParquetFileReader implements Closeable {
 
-  private ParquetCacheableFileReader reader;
+  private ParquetFileReader reader;
   private int currentBlock = 0;
 
-  private OapParquetFileReader(ParquetCacheableFileReader reader) {
+  private OapParquetFileReader(ParquetFileReader reader) {
     this.reader = reader;
   }
 
   public static OapParquetFileReader open(Configuration conf, Path file, ParquetMetadata footer)
           throws IOException {
-    return new OapParquetFileReader(new ParquetCacheableFileReader(conf, file, footer));
+    return new OapParquetFileReader(new ParquetFileReader(conf, file, footer));
   }
 
   public RowGroupDataAndRowIds readNextRowGroupAndRowIds() throws IOException {
@@ -59,6 +60,10 @@ public class OapParquetFileReader implements Closeable {
     PageReadStore pageReadStore = this.reader.readNextRowGroup();
     currentBlock ++;
     return pageReadStore;
+  }
+
+  public void filterRowGroups(FilterCompat.Filter filter) throws IOException {
+    this.reader.filterRowGroups(filter);
   }
 
   public void setRequestedSchema(MessageType projection) {
@@ -83,15 +88,15 @@ public class OapParquetFileReader implements Closeable {
   }
 
   public static ParquetFooter readParquetFooter(
-      Configuration configuration,
-      Path file) throws IOException {
+          Configuration configuration,
+          Path file) throws IOException {
     return readParquetFooter(configuration, file, NO_FILTER);
   }
 
   public static ParquetFooter readParquetFooter(
-      Configuration configuration,
-      Path file,
-      ParquetMetadataConverter.MetadataFilter filter) throws IOException {
+          Configuration configuration,
+          Path file,
+          ParquetMetadataConverter.MetadataFilter filter) throws IOException {
     return ParquetFooter.from(ParquetFileReader.readFooter(configuration, file, filter));
   }
 

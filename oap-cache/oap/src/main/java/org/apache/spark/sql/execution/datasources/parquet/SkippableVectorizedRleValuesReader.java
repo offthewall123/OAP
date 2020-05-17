@@ -18,7 +18,7 @@
 package org.apache.spark.sql.execution.datasources.parquet;
 
 public class SkippableVectorizedRleValuesReader extends VectorizedRleValuesReader
-    implements SkippableVectorizedValuesReader {
+        implements SkippableVectorizedValuesReader {
 
   private static final String UNSUPPORTED_OP_MSG = "only skipIntegers is valid.";
 
@@ -28,10 +28,6 @@ public class SkippableVectorizedRleValuesReader extends VectorizedRleValuesReade
 
   public SkippableVectorizedRleValuesReader(int bitWidth) {
     super(bitWidth);
-  }
-
-  public SkippableVectorizedRleValuesReader(int bitWidth, boolean readLength) {
-    super(bitWidth, readLength);
   }
 
   public void skipIntegers(int total, int level, SkippableVectorizedValuesReader data) {
