@@ -177,22 +177,21 @@ private[oap] case class OrcDataFile(
 
   private def initCacheReader(c: OrcDataFileContext,
                               reader: OrcCacheReader) = {
-//    reader.initialize(filePath, configuration)
-//    reader.initBatch(fileReader.getSchema, c.requestedColIds, c.requiredSchema.fields,
-//      c.partitionColumns, c.partitionValues)
-    // TODO type mismatch here
-//    val iterator = new FileRecordReaderIterator(reader)
-//    // TODO need to release
-//    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
-//      c.requestedColIds.foreach(release)) {
-//      override def close(): Unit = {
-//        // To ensure if any exception happens, caches are still released after calling close()
-//        inUseFiberCache.indices.foreach(release)
-//        if (recordReader != null) {
-//          recordReader.close()
-//        }
-//      }
-//    }
+    reader.initialize(filePath, configuration)
+    reader.initBatch(fileReader.getSchema, c.requestedColIds, c.requiredSchema.fields,
+      c.partitionColumns, c.partitionValues)
+    val iterator = new FileRecordReaderIterator(reader)
+    // TODO need to release
+    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
+      c.requestedColIds.foreach(release)) {
+      override def close(): Unit = {
+        // To ensure if any exception happens, caches are still released after calling close()
+        inUseFiberCache.indices.foreach(release)
+        if (recordReader != null) {
+          recordReader.close()
+        }
+      }
+    }
   }
 
   private def initRecordReader(

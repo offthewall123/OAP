@@ -26,13 +26,13 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.hadoop.api.InitContext
 import org.apache.parquet.hadoop.metadata._
 import org.apache.parquet.hadoop.utils.Collections3
+import org.apache.parquet.hadoop.api.RecordReader
 import org.apache.parquet.schema.{MessageType, Type}
 
 import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.memory.MemoryMode
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.execution.datasources.RecordReader
 import org.apache.spark.sql.execution.datasources.oap.filecache.{FiberCache, FiberId, VectorDataFiberId}
 import org.apache.spark.sql.execution.datasources.parquet.ParquetReadSupportWrapper
 import org.apache.spark.sql.execution.vectorized._

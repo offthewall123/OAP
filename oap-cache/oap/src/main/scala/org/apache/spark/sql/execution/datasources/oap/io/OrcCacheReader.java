@@ -18,15 +18,27 @@
 package org.apache.spark.sql.execution.datasources.oap.io;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.orc.*;
+import org.apache.orc.impl.ReaderImpl;
+import org.apache.orc.impl.RecordReaderCacheImpl;
+import org.apache.orc.mapred.OrcInputFormat;
 import org.apache.orc.storage.common.type.HiveDecimal;
 import org.apache.orc.storage.ql.exec.vector.*;
 import org.apache.orc.storage.serde2.io.HiveDecimalWritable;
+import org.apache.parquet.hadoop.ParquetFiberDataReader;
 import org.apache.spark.memory.MemoryMode;
 import org.apache.spark.sql.catalyst.InternalRow;
+import org.apache.spark.sql.execution.datasources.oap.filecache.DataFiberId;
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache;
-import org.apache.spark.sql.execution.datasources.oap.filecache.VectorDataFiberId;
+import org.apache.spark.sql.execution.datasources.oap.io.OrcDataFile;
+import org.apache.spark.sql.execution.datasources.oap.io.OrcDataFileMeta;
+import org.apache.spark.sql.execution.datasources.oap.io.ParquetDataFiberReader;
+import org.apache.spark.sql.execution.datasources.oap.io.ParquetDataFiberReader$;
 import org.apache.spark.sql.execution.datasources.orc.OrcColumnVector;
 import org.apache.spark.sql.execution.datasources.orc.OrcColumnVectorAllocator;
 import org.apache.spark.sql.execution.vectorized.ColumnVectorUtils;
@@ -41,8 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-public class OrcCacheReader
-    implements org.apache.spark.sql.execution.datasources.RecordReader<ColumnarBatch> {
+public class OrcCacheReader extends RecordReader<Void, ColumnarBatch> {
   private static final Logger LOG = LoggerFactory.getLogger(OrcCacheReader.class);
 
   // TODO: make this configurable.
@@ -120,9 +131,21 @@ public class OrcCacheReader
     this.fiberReaders = new ParquetDataFiberReader[requiredColumnIds.length];
   }
 
+
+
+  @Override
+  public Void getCurrentKey() {
+    return null;
+  }
+
   @Override
   public ColumnarBatch getCurrentValue() {
     return columnarBatch;
+  }
+
+  @Override
+  public float getProgress() throws IOException {
+    return (float) rowsReturned / totalRowCount;
   }
 
   @Override
@@ -143,7 +166,7 @@ public class OrcCacheReader
   }
 
   @Override
-  public void initialize() throws IOException, InterruptedException {
+  public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext) {
     // nothing required
   }
 
@@ -153,7 +176,7 @@ public class OrcCacheReader
    * This method is customized by Oap.
    */
   public void initialize(
-      Path file, Configuration conf) throws IOException {
+          Path file, Configuration conf) throws IOException {
     totalRowCount = meta.numberOfRows();
   }
 
@@ -162,11 +185,11 @@ public class OrcCacheReader
    * With this information, this creates ColumnarBatch with the full schema.
    */
   public void initBatch(
-      TypeDescription orcSchema,
-      int[] requestedColIds,
-      StructField[] requiredFields,
-      StructType partitionSchema,
-      InternalRow partitionValues) {
+          TypeDescription orcSchema,
+          int[] requestedColIds,
+          StructField[] requiredFields,
+          StructType partitionSchema,
+          InternalRow partitionValues) {
     batch = orcSchema.createRowBatch(CAPACITY);
     assert(!batch.selectedInUse); // `selectedInUse` should be initialized with `false`.
 
@@ -206,7 +229,7 @@ public class OrcCacheReader
     } else {
       // Just wrap the ORC column vector instead of copying it to Spark column vector.
       orcVectorWrappers =
-        new org.apache.spark.sql.vectorized.ColumnVector[resultSchema.length()];
+              new org.apache.spark.sql.vectorized.ColumnVector[resultSchema.length()];
 
       for (int i = 0; i < requiredFields.length; i++) {
         DataType dt = requiredFields[i].dataType();
@@ -308,9 +331,8 @@ public class OrcCacheReader
     int rowCount = (int)stripeInformation.getNumberOfRows();
     for (int i = 0; i < requiredColumnIds.length; ++i) {
       long start = System.nanoTime();
-      VectorDataFiberId fiberId =
-          new VectorDataFiberId(dataFile, requiredColumnIds[i], currentStripe);
-      FiberCache fiberCache = OapRuntime$.MODULE$.getOrCreate().fiberCacheManager().get(fiberId);
+      FiberCache fiberCache =
+              OapRuntime$.MODULE$.getOrCreate().fiberCacheManager().get(new DataFiberId(dataFile, requiredColumnIds[i], currentStripe));
       long end = System.nanoTime();
       loadFiberTime += (end - start);
       dataFile.update(requiredColumnIds[i], fiberCache);
@@ -354,10 +376,10 @@ public class OrcCacheReader
   }
 
   public static void putRepeatingValues(
-      int batchSize,
-      StructField field,
-      ColumnVector fromColumn,
-      WritableColumnVector toColumn) {
+          int batchSize,
+          StructField field,
+          ColumnVector fromColumn,
+          WritableColumnVector toColumn) {
     if (fromColumn.isNull[0]) {
       toColumn.putNulls(0, batchSize);
     } else {
@@ -374,7 +396,7 @@ public class OrcCacheReader
         toColumn.putLongs(0, batchSize, ((LongColumnVector)fromColumn).vector[0]);
       } else if (type instanceof TimestampType) {
         toColumn.putLongs(0, batchSize,
-          fromTimestampColumnVector((TimestampColumnVector)fromColumn, 0));
+                fromTimestampColumnVector((TimestampColumnVector)fromColumn, 0));
       } else if (type instanceof FloatType) {
         toColumn.putFloats(0, batchSize, (float)((DoubleColumnVector)fromColumn).vector[0]);
       } else if (type instanceof DoubleType) {
@@ -390,11 +412,11 @@ public class OrcCacheReader
       } else if (type instanceof DecimalType) {
         DecimalType decimalType = (DecimalType)type;
         putDecimalWritables(
-          toColumn,
-          batchSize,
-          decimalType.precision(),
-          decimalType.scale(),
-          ((DecimalColumnVector)fromColumn).vector[0]);
+                toColumn,
+                batchSize,
+                decimalType.precision(),
+                decimalType.scale(),
+                ((DecimalColumnVector)fromColumn).vector[0]);
       } else {
         throw new UnsupportedOperationException("Unsupported Data Type: " + type);
       }
@@ -402,10 +424,10 @@ public class OrcCacheReader
   }
 
   public static void putNonNullValues(
-      int batchSize,
-      StructField field,
-      ColumnVector fromColumn,
-      WritableColumnVector toColumn) {
+          int batchSize,
+          StructField field,
+          ColumnVector fromColumn,
+          WritableColumnVector toColumn) {
     DataType type = field.dataType();
     if (type instanceof BooleanType) {
       long[] data = ((LongColumnVector)fromColumn).vector;
@@ -461,11 +483,11 @@ public class OrcCacheReader
       }
       for (int index = 0; index < batchSize; index++) {
         putDecimalWritable(
-          toColumn,
-          index,
-          decimalType.precision(),
-          decimalType.scale(),
-          data.vector[index]);
+                toColumn,
+                index,
+                decimalType.precision(),
+                decimalType.scale(),
+                data.vector[index]);
       }
     } else {
       throw new UnsupportedOperationException("Unsupported Data Type: " + type);
@@ -473,10 +495,10 @@ public class OrcCacheReader
   }
 
   public static void putValues(
-      int batchSize,
-      StructField field,
-      ColumnVector fromColumn,
-      WritableColumnVector toColumn) {
+          int batchSize,
+          StructField field,
+          ColumnVector fromColumn,
+          WritableColumnVector toColumn) {
     DataType type = field.dataType();
     if (type instanceof BooleanType) {
       long[] vector = ((LongColumnVector)fromColumn).vector;
@@ -577,11 +599,11 @@ public class OrcCacheReader
           toColumn.putNull(index);
         } else {
           putDecimalWritable(
-            toColumn,
-            index,
-            decimalType.precision(),
-            decimalType.scale(),
-            vector[index]);
+                  toColumn,
+                  index,
+                  decimalType.precision(),
+                  decimalType.scale(),
+                  vector[index]);
         }
       }
     } else {
@@ -600,14 +622,14 @@ public class OrcCacheReader
    * Put a `HiveDecimalWritable` to a `WritableColumnVector`.
    */
   private static void putDecimalWritable(
-      WritableColumnVector toColumn,
-      int index,
-      int precision,
-      int scale,
-      HiveDecimalWritable decimalWritable) {
+          WritableColumnVector toColumn,
+          int index,
+          int precision,
+          int scale,
+          HiveDecimalWritable decimalWritable) {
     HiveDecimal decimal = decimalWritable.getHiveDecimal();
     Decimal value =
-      Decimal.apply(decimal.bigDecimalValue(), decimal.precision(), decimal.scale());
+            Decimal.apply(decimal.bigDecimalValue(), decimal.precision(), decimal.scale());
     value.changePrecision(precision, scale);
 
     if (precision <= Decimal.MAX_INT_DIGITS()) {
@@ -625,14 +647,14 @@ public class OrcCacheReader
    * Put `HiveDecimalWritable`s to a `WritableColumnVector`.
    */
   private static void putDecimalWritables(
-      WritableColumnVector toColumn,
-      int size,
-      int precision,
-      int scale,
-      HiveDecimalWritable decimalWritable) {
+          WritableColumnVector toColumn,
+          int size,
+          int precision,
+          int scale,
+          HiveDecimalWritable decimalWritable) {
     HiveDecimal decimal = decimalWritable.getHiveDecimal();
     Decimal value =
-      Decimal.apply(decimal.bigDecimalValue(), decimal.precision(), decimal.scale());
+            Decimal.apply(decimal.bigDecimalValue(), decimal.precision(), decimal.scale());
     value.changePrecision(precision, scale);
 
     if (precision <= Decimal.MAX_INT_DIGITS()) {
