@@ -17,32 +17,52 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.orc.StripeInformation;
+import org.apache.orc.TypeDescription;
+import org.apache.orc.storage.common.type.HiveDecimal;
+import org.apache.orc.storage.ql.exec.vector.*;
+import org.apache.orc.storage.serde2.io.HiveDecimalWritable;
+import org.apache.parquet.hadoop.ParquetFiberDataReader;
 import org.apache.parquet.hadoop.metadata.IndexedStripeMeta;
 import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntListIterator;
-import org.apache.spark.sql.execution.datasources.oap.filecache.VectorDataFiberId;
+import org.apache.spark.memory.MemoryMode;
+import org.apache.spark.sql.catalyst.InternalRow;
+import org.apache.spark.sql.execution.datasources.oap.filecache.DataFiberId;
+import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache;
+import org.apache.spark.sql.execution.datasources.orc.OrcColumnVector;
+import org.apache.spark.sql.execution.datasources.orc.OrcColumnVectorAllocator;
+import org.apache.spark.sql.execution.vectorized.ColumnVectorUtils;
+import org.apache.spark.sql.execution.vectorized.OffHeapColumnVector;
+import org.apache.spark.sql.execution.vectorized.OnHeapColumnVector;
+import org.apache.spark.sql.execution.vectorized.WritableColumnVector;
+import org.apache.spark.sql.oap.OapRuntime$;
+import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.vectorized.ColumnarBatch;
+import org.datanucleus.store.types.simple.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.common.collect.Lists;
 
-import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache;
-import org.apache.spark.sql.oap.OapRuntime$;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class IndexedOrcCacheReader extends OrcCacheReader {
   private static final Logger LOG = LoggerFactory.getLogger(IndexedOrcCacheReader.class);
 
   private int[] rowIds;
   private List<IndexedStripeMeta> validStripes = new java.util.ArrayList<IndexedStripeMeta>();
-//  private IntList validStripesIndex = new IntArrayList();
+  //  private IntList validStripesIndex = new IntArrayList();
   private int curStripeIndex = -1;
 //  private int validStripesLength;
 
@@ -51,9 +71,9 @@ public class IndexedOrcCacheReader extends OrcCacheReader {
   private Map<Integer, IntList> mapBatchIds = new HashMap<Integer, IntList>();
 
   private static final String IDS_MAP_STATE_ERROR_MSG =
-    "The divideRowIdsIntoPages method should not be called when mapBatchIds is not empty.";
+          "The divideRowIdsIntoPages method should not be called when mapBatchIds is not empty.";
   private static final String IDS_ITER_STATE_ERROR_MSG =
-    "The divideRowIdsIntoPages method should not be called when currentIndexList is Empty.";
+          "The divideRowIdsIntoPages method should not be called when currentIndexList is Empty.";
 
   public IndexedOrcCacheReader(Configuration configuration,
                                OrcDataFileMeta meta,
@@ -66,6 +86,11 @@ public class IndexedOrcCacheReader extends OrcCacheReader {
     this.rowIds = rowIds;
   }
 
+  @Override
+  public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext) {
+    // nothing required
+  }
+
   /**
    * Initialize ORC file reader and batch record reader.
    * Please note that `initBatch` is needed to be called after this.
@@ -73,7 +98,7 @@ public class IndexedOrcCacheReader extends OrcCacheReader {
    */
   @Override
   public void initialize(
-      Path file, Configuration conf) throws IOException {
+          Path file, Configuration conf) throws IOException {
 
 
     int nextStripeStartRowId = 0;
@@ -152,9 +177,8 @@ public class IndexedOrcCacheReader extends OrcCacheReader {
     int rowCount = (int)stripeInformation.getNumberOfRows();
     for (int i = 0; i < requiredColumnIds.length; ++i) {
       long start = System.nanoTime();
-      VectorDataFiberId fiberId = new VectorDataFiberId(
-          dataFile, requiredColumnIds[i], validStripes.get(curStripeIndex).stripeId);
-      FiberCache fiberCache = OapRuntime$.MODULE$.getOrCreate().fiberCacheManager().get(fiberId);
+      FiberCache fiberCache =
+              OapRuntime$.MODULE$.getOrCreate().fiberCacheManager().get(new DataFiberId(dataFile, requiredColumnIds[i], validStripes.get(curStripeIndex).stripeId));
       long end = System.nanoTime();
       loadFiberTime += (end - start);
       dataFile.update(requiredColumnIds[i], fiberCache);

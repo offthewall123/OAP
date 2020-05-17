@@ -37,10 +37,10 @@ import org.apache.spark.util.CompletionIterator
 
 // TODO: Pick out the scanner related code: e.g. findRowIdRange ...
 private[index] abstract class BTreeIndexRecordReader(
-    configuration: Configuration,
-    schema: StructType,
-    fileReader: IndexFileReader
-) extends Iterator[Int] {
+                                                      configuration: Configuration,
+                                                      schema: StructType,
+                                                      fileReader: IndexFileReader
+                                                    ) extends Iterator[Int] {
 
   // abstract members to be implemented
   protected var meta: BTreeMeta
@@ -82,10 +82,10 @@ private[index] abstract class BTreeIndexRecordReader(
 
   // Util functions
   protected def getBTreeFiberCache(
-      offset: Long, length: Int, sectionId: Int, idx: Int): FiberCache = {
+                                    offset: Long, length: Int, sectionId: Int, idx: Int): FiberCache = {
 
     val readFunc =
-      () => OapRuntime.getOrCreate.fiberCacheManager.toIndexFiberCache(readData(offset, length))
+      () => OapRuntime.getOrCreate.memoryManager.toIndexFiberCache(readData(offset, length))
     val fiber = BTreeFiberId(readFunc, fileReader.getName, sectionId, idx)
     OapRuntime.getOrCreate.fiberCacheManager.get(fiber)
   }
@@ -130,8 +130,8 @@ private[index] abstract class BTreeIndexRecordReader(
 
   // Public function
   def analyzeStatistics(
-      keySchema: StructType,
-      intervalArray: ArrayBuffer[RangeInterval]): StatsAnalysisResult = {
+                         keySchema: StructType,
+                         intervalArray: ArrayBuffer[RangeInterval]): StatsAnalysisResult = {
 
     if (!initialized) {
       initialized = true
@@ -181,7 +181,7 @@ private[index] abstract class BTreeIndexRecordReader(
     val nodeIdxForEnd = findNodeIdx(interval.end, isStart = false, compareFunc)
 
     if (nodeIdxForStart.isEmpty || nodeIdxForEnd.isEmpty ||
-        nodeIdxForEnd.get < nodeIdxForStart.get) {
+      nodeIdxForEnd.get < nodeIdxForStart.get) {
       (0, 0) // not found in B+ tree
     } else {
       val start =
@@ -205,11 +205,11 @@ private[index] abstract class BTreeIndexRecordReader(
   }
 
   protected def findRowIdPos(
-      nodeIdx: Int,
-      candidate: InternalRow,
-      isStart: Boolean,
-      findNext: Boolean,
-      compareFunc: CompareFunction = rowOrdering): Int = {
+                              nodeIdx: Int,
+                              candidate: InternalRow,
+                              isStart: Boolean,
+                              findNext: Boolean,
+                              compareFunc: CompareFunction = rowOrdering): Int = {
 
     val node = readBTreeNodeData(footer, nodeIdx)
 
@@ -248,18 +248,18 @@ private[index] abstract class BTreeIndexRecordReader(
    * @return Option of Node index and if candidate falls in node (means min <= candidate < max)
    */
   private def findNodeIdx(
-      candidate: InternalRow,
-      isStart: Boolean,
-      compareFunc: CompareFunction = rowOrdering): Option[Int] = {
+                           candidate: InternalRow,
+                           isStart: Boolean,
+                           compareFunc: CompareFunction = rowOrdering): Option[Int] = {
     if (isStart) {
       (0 until footer.getNodesCount).find { idx =>
         footer.getRowCountOfNode(idx) > 0 && // ensure this node is not an empty node
-            compareFunc(candidate, footer.getMaxValue(idx, schema), true) <= 0
+          compareFunc(candidate, footer.getMaxValue(idx, schema), true) <= 0
       }
     } else {
       (0 until footer.getNodesCount).reverse.find { idx =>
         footer.getRowCountOfNode(idx) > 0 && // ensure this node is not an empty node
-            compareFunc(candidate, footer.getMinValue(idx, schema), false) >= 0
+          compareFunc(candidate, footer.getMinValue(idx, schema), false) >= 0
       }
     }
   }
@@ -371,9 +371,9 @@ private[index] abstract class BTreeIndexRecordReader(
 
 private[index] object BTreeIndexRecordReader {
   def apply(
-      configuration: Configuration,
-      schema: StructType,
-      indexPath: Path): BTreeIndexRecordReader = {
+             configuration: Configuration,
+             schema: StructType,
+             indexPath: Path): BTreeIndexRecordReader = {
 
     val fileReader = IndexFileReaderImpl(configuration, indexPath)
 

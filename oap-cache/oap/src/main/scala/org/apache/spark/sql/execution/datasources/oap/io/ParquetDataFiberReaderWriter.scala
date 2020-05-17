@@ -112,7 +112,7 @@ object ParquetDataFiberWriter extends Logging {
    * Write nulls data to data fiber.
    */
   private def dumpNullsToFiber(
-      nativeAddress: Long, column: OnHeapColumnVector, total: Int): Long = {
+                                nativeAddress: Long, column: OnHeapColumnVector, total: Int): Long = {
     Platform.copyMemory(column.getNulls,
       Platform.BYTE_ARRAY_OFFSET, null, nativeAddress, total)
     nativeAddress + total
@@ -175,7 +175,7 @@ object ParquetDataFiberWriter extends Logging {
    * Write dictionaryIds(int array) and Dictionary data to data fiber.
    */
   private def dumpDataAndDicToFiber(
-      nativeAddress: Long, column: OnHeapColumnVector, total: Int, dicLength: Int): Unit = {
+                                     nativeAddress: Long, column: OnHeapColumnVector, total: Int, dicLength: Int): Unit = {
     // dump dictionaryIds to data fiber, it's a int array.
     val dictionaryIds = column.getDictionaryIds.asInstanceOf[OnHeapColumnVector]
     Platform.copyMemory(dictionaryIds.getIntData,
@@ -267,7 +267,7 @@ object ParquetDataFiberWriter extends Logging {
    * dicLength is not, need calculate dictionary part and dictionaryIds is a int array.
    */
   private def fiberLength(
-      column: OnHeapColumnVector, total: Int, nullUnitLength: Int, dicLength: Int): Long = {
+                           column: OnHeapColumnVector, total: Int, nullUnitLength: Int, dicLength: Int): Long = {
     val dicPartSize = column.dataType() match {
       case ByteType | ShortType | IntegerType | DateType => dicLength * 4L
       case FloatType => dicLength * 4L
@@ -306,7 +306,7 @@ object ParquetDataFiberWriter extends Logging {
   }
 
   private def emptyDataFiber(fiberLength: Long): FiberCache =
-    OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
+    OapRuntime.getOrCreate.memoryManager.getEmptyDataFiberCache(fiberLength)
 }
 
 /**
@@ -329,7 +329,7 @@ class ParquetDataFiberReader (address: Long, dataType: DataType, total: Int) ext
    * @param column target OnHeapColumnVector.
    */
   def readBatch(
-      start: Int, num: Int, column: OnHeapColumnVector): Unit = if (dictionary != null) {
+                 start: Int, num: Int, column: OnHeapColumnVector): Unit = if (dictionary != null) {
     // Use dictionary encode, value store in dictionaryIds, it's a int array.
     column.setDictionary(dictionary)
     val dictionaryIds = column.reserveDictionaryIds(num).asInstanceOf[OnHeapColumnVector]
@@ -465,7 +465,7 @@ class ParquetDataFiberReader (address: Long, dataType: DataType, total: Int) ext
    * not Dictionary encode.
    */
   protected def readBatch(
-      dataNativeAddress: Long, start: Int, num: Int, column: OnHeapColumnVector): Unit = {
+                           dataNativeAddress: Long, start: Int, num: Int, column: OnHeapColumnVector): Unit = {
 
     def readBinaryToColumnVector(): Unit = {
       Platform.copyMemory(null,
@@ -550,7 +550,7 @@ class ParquetDataFiberReader (address: Long, dataType: DataType, total: Int) ext
    * read value one by one, not Dictionary encode.
    */
   private def readBatch(
-      dataNativeAddress: Long, rowIdList: IntList, column: OnHeapColumnVector): Unit = {
+                         dataNativeAddress: Long, rowIdList: IntList, column: OnHeapColumnVector): Unit = {
 
     def readBinaryToColumnVector(): Unit = {
       val arrayLengths = column.getArrayLengths
@@ -651,7 +651,7 @@ class ParquetDataFiberReader (address: Long, dataType: DataType, total: Int) ext
    * Read a `dicLength` size Parquet Dictionary from data fiber.
    */
   private def readDictionary(
-      dataType: DataType, dicLength: Int, dicNativeAddress: Long): Dictionary = {
+                              dataType: DataType, dicLength: Int, dicNativeAddress: Long): Dictionary = {
 
     def readBinaryDictionary: Dictionary = {
       val binaryDictionaryContent = new Array[Binary](dicLength)

@@ -30,13 +30,7 @@ import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.unsafe.types.UTF8String
 
-object FiberType extends Enumeration {
-  type FiberType = Value
-  val INDEX, DATA, GENERAL = Value
-}
-
-case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHolder)
-  extends Logging {
+case class FiberCache(fiberData: MemoryBlockHolder) extends Logging {
 
   // This is and only is set in `cache() of OapCache`
   // TODO: make it immutable
@@ -65,7 +59,7 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
   }
 
   def isFailedMemoryBlock(): Boolean = {
-    fiberData.length == 0
+    fiberData.cacheType == CacheEnum.FAIL
   }
 
   def setOriginByteArray(bytes: Array[Byte]): Unit = {
@@ -94,11 +88,6 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
     column
   }
 
-  def resetColumn() : Unit = {
-    this.column = null
-    this.originByteArray = null
-  }
-
   // TODO: seems we are safe even on lock for release.
   // 1. if we release fiber during another occupy. atomic refCount is thread-safe.
   // 2. if we release fiber during another tryDispose. the very last release lead to realDispose.
@@ -107,39 +96,10 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
     _refCount.decrementAndGet()
   }
 
-  def tryDisposeWithoutWait(): Boolean = {
-    require(fiberId != null, "FiberId shouldn't be null for this FiberCache")
-    val writeLockOp = OapRuntime.get.map(_.fiberCacheManager.getFiberLock(fiberId).writeLock())
-    writeLockOp match {
-      case None => return true // already stopped OapRuntime
-      case Some(writeLock) =>
-        if (refCount != 0) {
-          // LRU access (get and occupy) done, but fiber was still occupied by at least one
-          // reader, so it needs to sleep some time to see if the reader done.
-          // Otherwise, it becomes a polling loop.
-          // TODO: use lock/sync-obj to leverage the concurrency APIs instead of explicit sleep.
-          return false
-        } else {
-          if (writeLock.tryLock(200, TimeUnit.MILLISECONDS)) {
-            try {
-              if (refCount == 0) {
-                realDispose()
-                return true
-              }
-            } finally {
-              writeLock.unlock()
-            }
-          }
-        }
-    }
-    logWarning(s"Fiber Cache Dispose waiting detected for $fiberId")
-    false
-  }
-
   def tryDispose(): Boolean = {
     require(fiberId != null, "FiberId shouldn't be null for this FiberCache")
     val startTime = System.currentTimeMillis()
-    val writeLockOp = OapRuntime.get.map(_.fiberCacheManager.getFiberLock(fiberId).writeLock())
+    val writeLockOp = OapRuntime.get.map(_.fiberLockManager.getFiberLock(fiberId).writeLock())
     writeLockOp match {
       case None => return true // already stopped OapRuntime
       case Some(writeLock) =>
@@ -173,7 +133,13 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
   def isDisposed: Boolean = disposed
   protected[filecache] def realDispose(): Unit = {
     if (!disposed) {
-      OapRuntime.get.foreach(_.fiberCacheManager.freeFiber(this))
+      if (!isFailedMemoryBlock()) {
+        OapRuntime.get.foreach(_.memoryManager.free(fiberData))
+      } else {
+        this.column = null
+        this.originByteArray = null
+      }
+      OapRuntime.get.foreach(_.fiberLockManager.removeFiberLock(fiberId))
     }
     disposed = true
   }
@@ -245,31 +211,35 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
   // Return the occupied size and it's typically larger than the required data size due to memory
   // alignments from underlying allocator
   def getOccupiedSize(): Long = fiberData.occupiedSize
+
+  def setMemBlockCacheType(cacheType: CacheEnum.CacheEnum): FiberCache = {
+    this.fiberData.cacheType = cacheType
+    this
+  }
 }
 
 class DecompressBatchedFiberCache (
-     override val fiberType: FiberType.FiberType, override val fiberData: MemoryBlockHolder,
-     var batchedCompressed: Boolean = false, fiberCache: FiberCache)
-     extends FiberCache (fiberType = fiberType, fiberData = fiberData) {
+                                    override val fiberData: MemoryBlockHolder, var batchedCompressed: Boolean = false,
+                                    fiberCache: FiberCache) extends FiberCache (fiberData = fiberData) {
   override  def release(): Unit = if (fiberCache !=  null) {
-      fiberCache.release()
-    }
+    fiberCache.release()
+  }
 }
 
 case class CompressedBatchedFiberInfo(
-    startAddress: Long, endAddress: Long,
-    compressed: Boolean, length: Long)
+                                       startAddress: Long, endAddress: Long,
+                                       compressed: Boolean, length: Long)
 
 object FiberCache {
   //  For test purpose :convert Array[Byte] to FiberCache
   private[oap] def apply(data: Array[Byte]): FiberCache = {
     val memoryBlockHolder =
       MemoryBlockHolder(
+        CacheEnum.GENERAL,
         data,
         Platform.BYTE_ARRAY_OFFSET,
         data.length,
-        data.length,
-        SourceEnum.DRAM)
-    FiberCache(FiberType.GENERAL, memoryBlockHolder)
+        data.length)
+    FiberCache(memoryBlockHolder)
   }
 }

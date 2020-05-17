@@ -38,9 +38,9 @@ private[oap] abstract class OapDataFile extends DataFile {
 }
 
 private[oap] case class OapDataFileV1(
-    path: String,
-    schema: StructType,
-    configuration: Configuration) extends OapDataFile {
+                                       path: String,
+                                       schema: StructType,
+                                       configuration: Configuration) extends OapDataFile {
 
   private val dictionaries = new Array[Dictionary](schema.length)
   private val codecFactory = new CodecFactory(configuration)
@@ -136,14 +136,14 @@ private[oap] case class OapDataFileV1(
     // We have to read Array[Byte] from file and decode/decompress it before putToFiberCache
     // TODO: Try to finish this in off-heap memory
     val data = fiberParser.parse(decompressor.decompress(bytes, uncompressedLen), rowCount)
-    OapRuntime.getOrCreate.fiberCacheManager.toDataFiberCache(data)
+    OapRuntime.getOrCreate.memoryManager.toDataFiberCache(data)
   }
 
   private def buildIterator(
-      conf: Configuration,
-      requiredIds: Array[Int],
-      rowIds: Option[Array[Int]],
-      filters: Seq[Filter]): OapCompletionIterator[InternalRow] = {
+                             conf: Configuration,
+                             requiredIds: Array[Int],
+                             rowIds: Option[Array[Int]],
+                             filters: Seq[Filter]): OapCompletionIterator[InternalRow] = {
     val rows = new BatchColumn()
     val groupIdToRowIds = rowIds.map(_.groupBy(rowId => rowId / meta.rowCountInEachGroup))
     val groupIds = groupIdToRowIds.map(_.keys).getOrElse(0 until meta.groupCount)
@@ -158,7 +158,7 @@ private[oap] case class OapDataFileV1(
       groupId =>
         val fiberCacheGroup = requiredIds.map { id =>
           val fiberCache = OapRuntime.getOrCreate.fiberCacheManager.get(
-            VectorDataFiberId(this, id, groupId))
+            DataFiberId(this, id, groupId))
           update(id, fiberCache)
           fiberCache
         }
@@ -188,16 +188,16 @@ private[oap] case class OapDataFileV1(
 
   // full file scan
   def iterator(requiredIds: Array[Int], filters: Seq[Filter] = Nil)
-    : OapCompletionIterator[Any] = {
+  : OapCompletionIterator[Any] = {
     val iterator = buildIterator(configuration, requiredIds, rowIds = None, filters)
     iterator.asInstanceOf[OapCompletionIterator[Any]]
   }
 
   // scan by given row ids, and we assume the rowIds are sorted
   def iteratorWithRowIds(
-      requiredIds: Array[Int],
-      rowIds: Array[Int],
-      filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
+                          requiredIds: Array[Int],
+                          rowIds: Array[Int],
+                          filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
     val iterator = buildIterator(configuration, requiredIds, Some(rowIds), filters)
     iterator.asInstanceOf[OapCompletionIterator[Any]]
   }

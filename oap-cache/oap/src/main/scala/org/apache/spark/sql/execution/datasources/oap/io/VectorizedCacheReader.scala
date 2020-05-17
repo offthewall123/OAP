@@ -23,17 +23,16 @@ import java.util
 import scala.collection.JavaConverters._
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.parquet.hadoop.api.InitContext
+import org.apache.parquet.hadoop.api.{InitContext, RecordReader}
 import org.apache.parquet.hadoop.metadata._
 import org.apache.parquet.hadoop.utils.Collections3
-import org.apache.parquet.hadoop.api.RecordReader
 import org.apache.parquet.schema.{MessageType, Type}
 
 import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.memory.MemoryMode
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.execution.datasources.oap.filecache.{FiberCache, FiberId, VectorDataFiberId}
+import org.apache.spark.sql.execution.datasources.oap.filecache._
 import org.apache.spark.sql.execution.datasources.parquet.ParquetReadSupportWrapper
 import org.apache.spark.sql.execution.vectorized._
 import org.apache.spark.sql.oap.OapRuntime
@@ -41,10 +40,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.vectorized.{ColumnarBatch, ColumnVector}
 
 class VectorizedCacheReader(
-    configuration: Configuration,
-    footer: ParquetMetadata,
-    dataFile: ParquetDataFile,
-    requiredColumnIds: Array[Int])
+                             configuration: Configuration,
+                             footer: ParquetMetadata,
+                             dataFile: ParquetDataFile,
+                             requiredColumnIds: Array[Int])
   extends RecordReader[AnyRef] with Logging {
 
   protected val defaultCapacity: Int =
@@ -179,7 +178,7 @@ class VectorizedCacheReader(
           null
         } else {
           val start = System.nanoTime()
-          val fiberId = VectorDataFiberId(dataFile, id, groupId)
+          val fiberId = DataFiberId(dataFile, id, groupId);
           val fiberCache: FiberCache =
             OapRuntime.getOrCreate.fiberCacheManager.get(fiberId)
           val end = System.nanoTime()
@@ -260,7 +259,7 @@ class VectorizedCacheReader(
   }
 
   def initBatch(memMode: MemoryMode, partitionColumns: StructType,
-      partitionValues: InternalRow): Unit = {
+                partitionValues: InternalRow): Unit = {
     var batchSchema = new StructType
     for (f <- sparkSchema.fields) {
       batchSchema = batchSchema.add(f)
@@ -301,8 +300,8 @@ class VectorizedCacheReader(
 
     for (i <- fiberReaders.indices) {
       if (fiberReaders(i) != null) {
-          fiberReaders(i).readBatch(currentRowGroupRowsReturned, num, columnVectors(i)
-            .asInstanceOf[OnHeapColumnVector])
+        fiberReaders(i).readBatch(currentRowGroupRowsReturned, num, columnVectors(i)
+          .asInstanceOf[OnHeapColumnVector])
       }
     }
 
