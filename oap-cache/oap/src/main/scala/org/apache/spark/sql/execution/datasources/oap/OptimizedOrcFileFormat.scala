@@ -28,7 +28,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.{OutputWriterFactory, PartitionedFile}
 import org.apache.spark.sql.execution.datasources.oap.io.{DataFileContext, OapDataReaderV1, OrcDataFileContext}
-import org.apache.spark.sql.execution.datasources.orc.{OrcFilters, OrcUtils}
+import org.apache.spark.sql.execution.datasources.orc.{OrcFiltersAdapter, OrcUtils}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.types.{AtomicType, StructType}
@@ -37,10 +37,10 @@ import org.apache.spark.util.SerializableConfiguration
 private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
 
   override def prepareWrite(
-      sparkSession: SparkSession,
-      job: Job,
-      options: Map[String, String],
-      dataSchema: StructType): OutputWriterFactory =
+                             sparkSession: SparkSession,
+                             job: Job,
+                             options: Map[String, String],
+                             dataSchema: StructType): OutputWriterFactory =
     throw new UnsupportedOperationException("OptimizedOrcFileFormat " +
       "only support read operation")
 
@@ -56,13 +56,13 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
   }
 
   override def buildReaderWithPartitionValues(
-     sparkSession: SparkSession,
-     dataSchema: StructType,
-     partitionSchema: StructType,
-     requiredSchema: StructType,
-     filters: Seq[Filter],
-     options: Map[String, String],
-     hadoopConf: Configuration): PartitionedFile => Iterator[InternalRow] = {
+                                               sparkSession: SparkSession,
+                                               dataSchema: StructType,
+                                               partitionSchema: StructType,
+                                               requiredSchema: StructType,
+                                               filters: Seq[Filter],
+                                               options: Map[String, String],
+                                               hadoopConf: Configuration): PartitionedFile => Iterator[InternalRow] = {
     // TODO we need to pass the extra data source meta information via the func parameter
     val (filterScanners, m) = meta match {
       case Some(x) =>
@@ -94,7 +94,8 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
 
     // Push down the filters to the orc record reader.
     if (sparkSession.sessionState.conf.orcFilterPushDown) {
-      OrcFilters.createFilter(dataSchema, filters).foreach { f =>
+      OrcFiltersAdapter.createFilter(dataSchema,
+        filters).foreach { f =>
         OrcInputFormat.setSearchArgument(hadoopConf, f, dataSchema.fieldNames)
       }
     }
@@ -115,12 +116,17 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
       // For Orc, the context is used by both vectorized readers and map reduce readers.
       // See the comments in DataFile.scala.
       val context: Option[DataFileContext] = {
-        if (requiredIds.length != 0) {
-          assert(requiredIds.length == requiredSchema.length,
+        val readerOptions = OrcFile.readerOptions(conf).filesystem(fs)
+        val reader = OrcFile.createReader(path, readerOptions)
+        val requestedColIdsOrEmptyFile = OrcUtils.requestedColumnIds(
+          isCaseSensitive, dataSchema, requiredSchema, reader, conf)
+        if (requestedColIdsOrEmptyFile.isDefined) {
+          val requestedColIds = requestedColIdsOrEmptyFile.get
+          assert(requestedColIds.length == requiredSchema.length,
             "[BUG] requested column IDs do not match required schema")
           Some(OrcDataFileContext(partitionSchema, file.partitionValues,
             returningBatch, requiredSchema, dataSchema, enableOffHeapColumnVector,
-            copyToSpark, requiredIds))
+            copyToSpark, requestedColIds))
         } else {
           orcWithEmptyColIds = true
           None
