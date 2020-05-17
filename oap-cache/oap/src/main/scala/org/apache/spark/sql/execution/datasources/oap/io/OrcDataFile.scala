@@ -180,6 +180,7 @@ private[oap] case class OrcDataFile(
 //    reader.initialize(filePath, configuration)
 //    reader.initBatch(fileReader.getSchema, c.requestedColIds, c.requiredSchema.fields,
 //      c.partitionColumns, c.partitionValues)
+    // TODO type mismatch here
 //    val iterator = new FileRecordReaderIterator(reader)
 //    // TODO need to release
 //    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],

@@ -143,6 +143,8 @@ private[oap] case class ParquetDataFile(
     //    if (rowIds == null || rowIds.length == 0) {
 //      new OapCompletionIterator(Iterator.empty, {})
 //    } else {
+    // TODO type mismatch here
+
 //      val iterator = context match {
 //        case Some(c) =>
 //          // Parquet RowGroupCount can more than Int.MaxValue,
@@ -188,6 +190,7 @@ private[oap] case class ParquetDataFile(
 //    if (c.returningBatch) {
 //      reader.enableReturningBatches()
 //    }
+    // TODO type mismatch here
 //    val iterator = new FileRecordReaderIterator(reader)
 //    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]], {}) {
 //      override def close(): Unit = iterator.close()
@@ -201,6 +204,7 @@ private[oap] case class ParquetDataFile(
 //    if (c.returningBatch) {
 //      reader.enableReturningBatches()
 //    }
+    // TODO type mismatch here
 //    val iterator = new FileRecordReaderIterator(reader)
 //    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
 //      requiredColumnIds.foreach(release)) {
