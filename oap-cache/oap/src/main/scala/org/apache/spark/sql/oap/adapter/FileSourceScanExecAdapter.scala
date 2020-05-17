@@ -25,12 +25,13 @@ import org.apache.spark.sql.types.StructType
 
 object FileSourceScanExecAdapter {
   def createFileSourceScanExec(
-                                relation: HadoopFsRelation,
-                                output: Seq[Attribute],
-                                requiredSchema: StructType,
-                                partitionFilters: Seq[Expression],
-                                dataFilters: Seq[Expression],
-                                metastoreTableIdentifier: Option[TableIdentifier]): FileSourceScanExec = {
+                relation: HadoopFsRelation,
+                output: Seq[Attribute],
+                requiredSchema: StructType,
+                partitionFilters: Seq[Expression],
+                dataFilters: Seq[Expression],
+                metastoreTableIdentifier: Option[TableIdentifier]):
+    FileSourceScanExec = {
     FileSourceScanExec(
       relation,
       output,

@@ -17,16 +17,18 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
+import java.io.Closeable
+
 import scala.collection.JavaConverters._
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.util.StringUtils
 import org.apache.parquet.hadoop._
+import org.apache.parquet.hadoop.api.RecordReader
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
-import org.apache.spark.sql.execution.datasources.RecordReader
 import org.apache.spark.sql.execution.datasources.oap.filecache._
 import org.apache.spark.sql.execution.datasources.parquet.ParquetReadSupportWrapper
 import org.apache.spark.sql.internal.oap.OapConf
@@ -62,9 +64,9 @@ import org.apache.spark.sql.types._
  * @param configuration hadoop configuration
  */
 private[oap] case class ParquetDataFile(
-    path: String,
-    schema: StructType,
-    configuration: Configuration) extends DataFile {
+                                         path: String,
+                                         schema: StructType,
+                                         configuration: Configuration) extends DataFile {
 
   private var context: Option[ParquetVectorizedContext] = None
   private lazy val meta =
@@ -79,9 +81,9 @@ private[oap] case class ParquetDataFile(
   private val inUseFiberCache = new Array[FiberCache](schema.length)
 
   private def release(idx: Int): Unit = Option(inUseFiberCache(idx)).foreach { fiberCache =>
-      fiberCache.release()
-      inUseFiberCache.update(idx, null)
-    }
+    fiberCache.release()
+    inUseFiberCache.update(idx, null)
+  }
 
   private[oap] def update(idx: Int, fiberCache: FiberCache): Unit = {
     release(idx)
@@ -106,8 +108,8 @@ private[oap] case class ParquetDataFile(
   }
 
   def iterator(
-    requiredIds: Array[Int],
-    filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
+                requiredIds: Array[Int],
+                filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
     val iterator = context match {
       case Some(c) =>
         // Parquet RowGroupCount can more than Int.MaxValue,
@@ -134,37 +136,38 @@ private[oap] case class ParquetDataFile(
   }
 
   def iteratorWithRowIds(
-      requiredIds: Array[Int],
-      rowIds: Array[Int],
-      filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
-    if (rowIds == null || rowIds.length == 0) {
-      new OapCompletionIterator(Iterator.empty, {})
-    } else {
-      val iterator = context match {
-        case Some(c) =>
-          // Parquet RowGroupCount can more than Int.MaxValue,
-          // in that sence we should not cache data in memory
-          // and rollback to read this rowgroup from file directly.
-          if (parquetDataCacheEnable &&
-            !meta.footer.getBlocks.asScala.exists(_.getRowCount > Int.MaxValue)) {
-            addRequestSchemaToConf(configuration, requiredIds)
-            initCacheReader(requiredIds, c,
-              new IndexedVectorizedCacheReader(configuration,
-                meta.footer.toParquetMetadata(rowIds), this, requiredIds))
-          } else {
-            addRequestSchemaToConf(configuration, requiredIds)
-            initVectorizedReader(c,
-              new IndexedVectorizedOapRecordReader(file,
-                configuration, meta.footer, rowIds))
-          }
-        case _ =>
-          addRequestSchemaToConf(configuration, requiredIds)
-          initRecordReader(
-            new IndexedMrOapRecordReader[UnsafeRow](new ParquetReadSupportWrapper,
-              file, configuration, rowIds, meta.footer))
-      }
-      iterator.asInstanceOf[OapCompletionIterator[Any]]
-    }
+                          requiredIds: Array[Int],
+                          rowIds: Array[Int],
+                          filters: Seq[Filter] = Nil): OapCompletionIterator[Any] = {
+    new OapCompletionIterator(Iterator.empty, {})
+    //    if (rowIds == null || rowIds.length == 0) {
+//      new OapCompletionIterator(Iterator.empty, {})
+//    } else {
+//      val iterator = context match {
+//        case Some(c) =>
+//          // Parquet RowGroupCount can more than Int.MaxValue,
+//          // in that sence we should not cache data in memory
+//          // and rollback to read this rowgroup from file directly.
+//          if (parquetDataCacheEnable &&
+//            !meta.footer.getBlocks.asScala.exists(_.getRowCount > Int.MaxValue)) {
+//            addRequestSchemaToConf(configuration, requiredIds)
+//            initCacheReader(requiredIds, c,
+//              new IndexedVectorizedCacheReader(configuration,
+//                meta.footer.toParquetMetadata(rowIds), this, requiredIds))
+//          } else {
+//            addRequestSchemaToConf(configuration, requiredIds)
+//            initVectorizedReader(c,
+//              new IndexedVectorizedOapRecordReader(file,
+//                configuration, meta.footer, rowIds))
+//          }
+//        case _ =>
+//          addRequestSchemaToConf(configuration, requiredIds)
+//          initRecordReader(
+//            new IndexedMrOapRecordReader[UnsafeRow](new ParquetReadSupportWrapper,
+//              file, configuration, rowIds, meta.footer))
+//      }
+//      iterator.asInstanceOf[OapCompletionIterator[Any]]
+//    }
   }
 
   def setParquetVectorizedContext(context: Option[ParquetVectorizedContext]): Unit =
@@ -179,37 +182,37 @@ private[oap] case class ParquetDataFile(
   }
 
   private def initVectorizedReader(c: ParquetVectorizedContext,
-      reader: VectorizedOapRecordReader) = {
-    reader.initialize()
-    reader.initBatch(c.partitionColumns, c.partitionValues)
-    if (c.returningBatch) {
-      reader.enableReturningBatches()
-    }
-    val iterator = new FileRecordReaderIterator(reader)
-    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]], {}) {
-      override def close(): Unit = iterator.close()
-    }
+                                   reader: VectorizedOapRecordReader) = {
+//    reader.initialize()
+//    reader.initBatch(c.partitionColumns, c.partitionValues)
+//    if (c.returningBatch) {
+//      reader.enableReturningBatches()
+//    }
+//    val iterator = new FileRecordReaderIterator(reader)
+//    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]], {}) {
+//      override def close(): Unit = iterator.close()
+//    }
   }
 
   private def initCacheReader(requiredColumnIds: Array[Int],
-      c: ParquetVectorizedContext, reader: VectorizedCacheReader) = {
-    reader.initialize()
-    reader.initBatch(c.partitionColumns, c.partitionValues)
-    if (c.returningBatch) {
-      reader.enableReturningBatches()
-    }
-    val iterator = new FileRecordReaderIterator(reader)
-    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
-      requiredColumnIds.foreach(release)) {
-      override def close(): Unit = {
-        // To ensure if any exception happens, caches are still released after calling close()
-        inUseFiberCache.indices.foreach(release)
-        if (fiberDataReader != null) {
-          fiberDataReader.close()
-          reader.close()
-        }
-      }
-    }
+                              c: ParquetVectorizedContext, reader: VectorizedCacheReader) = {
+//    reader.initialize()
+//    reader.initBatch(c.partitionColumns, c.partitionValues)
+//    if (c.returningBatch) {
+//      reader.enableReturningBatches()
+//    }
+//    val iterator = new FileRecordReaderIterator(reader)
+//    new OapCompletionIterator[InternalRow](iterator.asInstanceOf[Iterator[InternalRow]],
+//      requiredColumnIds.foreach(release)) {
+//      override def close(): Unit = {
+//        // To ensure if any exception happens, caches are still released after calling close()
+//        inUseFiberCache.indices.foreach(release)
+//        if (fiberDataReader != null) {
+//          fiberDataReader.close()
+//          reader.close()
+//        }
+//      }
+//    }
   }
 
   private def addRequestSchemaToConf(conf: Configuration, requiredIds: Array[Int]): Unit = {
@@ -221,6 +224,41 @@ private[oap] case class ParquetDataFile(
       requestSchema.json
     }
     conf.set(ParquetReadSupportWrapper.SPARK_ROW_REQUESTED_SCHEMA, requestSchemaString)
+  }
+
+  private class FileRecordReaderIterator[V](private[this] var rowReader: RecordReader[V])
+    extends Iterator[V] with Closeable {
+    private[this] var havePair = false
+    private[this] var finished = false
+
+    override def hasNext: Boolean = {
+      if (!finished && !havePair) {
+        finished = !rowReader.nextKeyValue
+        if (finished) {
+          close()
+        }
+        havePair = !finished
+      }
+      !finished
+    }
+
+    override def next(): V = {
+      if (!hasNext) {
+        throw new java.util.NoSuchElementException("End of stream")
+      }
+      havePair = false
+      rowReader.getCurrentValue
+    }
+
+    override def close(): Unit = {
+      if (rowReader != null) {
+        try {
+          rowReader.close()
+        } finally {
+          rowReader = null
+        }
+      }
+    }
   }
 
   override def getDataFileMeta(): ParquetDataFileMeta =

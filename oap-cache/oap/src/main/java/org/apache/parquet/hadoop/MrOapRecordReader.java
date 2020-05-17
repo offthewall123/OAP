@@ -23,9 +23,10 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.hadoop.api.ReadSupport;
+import org.apache.parquet.hadoop.api.RecordReader;
 import org.apache.parquet.hadoop.metadata.ParquetFooter;
 
-import org.apache.spark.sql.execution.datasources.RecordReader;
+import static org.apache.parquet.hadoop.ParquetInputFormat.getFilter;
 
 public class MrOapRecordReader<T> implements RecordReader<T> {
 
@@ -39,42 +40,43 @@ public class MrOapRecordReader<T> implements RecordReader<T> {
     private ParquetFooter footer;
 
     public MrOapRecordReader(
-        ReadSupport<T> readSupport,
-        Path file,
-        Configuration configuration,
-        ParquetFooter footer) {
-      this.readSupport = readSupport;
-      this.file = file;
-      this.configuration = configuration;
-      this.footer = footer;
+            ReadSupport<T> readSupport,
+            Path file,
+            Configuration configuration,
+            ParquetFooter footer) {
+        this.readSupport = readSupport;
+        this.file = file;
+        this.configuration = configuration;
+        this.footer = footer;
     }
 
     @Override
     public void close() throws IOException {
-      internalReader.close();
+        internalReader.close();
     }
 
     @Override
     public T getCurrentValue() throws IOException, InterruptedException {
-      return internalReader.getCurrentValue();
+        return internalReader.getCurrentValue();
     }
 
     @Override
     public void initialize() throws IOException, InterruptedException {
-      ParquetCacheableFileReader parquetFileReader = null;
-      try {
-        parquetFileReader =
-            new ParquetCacheableFileReader(configuration, file, footer.toParquetMetadata());
-        this.internalReader = new InternalParquetRecordReader<>(readSupport);
-        this.internalReader.initialize(parquetFileReader, configuration);
-      } catch (IOException e) {
-        if(null != parquetFileReader) parquetFileReader.close();
-        throw e;
-      }
+        ParquetFileReader parquetFileReader = null;
+        try {
+            parquetFileReader =
+                    ParquetFileReader.open(configuration, file, footer.toParquetMetadata());
+            parquetFileReader.filterRowGroups(getFilter(configuration));
+            this.internalReader = new InternalParquetRecordReader<>(readSupport);
+            this.internalReader.initialize(parquetFileReader, configuration);
+        } catch (IOException e) {
+            if(null != parquetFileReader) parquetFileReader.close();
+            throw e;
+        }
     }
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-      return internalReader.nextKeyValue();
+        return internalReader.nextKeyValue();
     }
 }

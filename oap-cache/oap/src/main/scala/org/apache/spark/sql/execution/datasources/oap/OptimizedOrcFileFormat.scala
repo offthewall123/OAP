@@ -56,13 +56,13 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
   }
 
   override def buildReaderWithPartitionValues(
-                                               sparkSession: SparkSession,
-                                               dataSchema: StructType,
-                                               partitionSchema: StructType,
-                                               requiredSchema: StructType,
-                                               filters: Seq[Filter],
-                                               options: Map[String, String],
-                                               hadoopConf: Configuration): PartitionedFile => Iterator[InternalRow] = {
+                sparkSession: SparkSession,
+                dataSchema: StructType,
+                partitionSchema: StructType,
+                requiredSchema: StructType,
+                filters: Seq[Filter],
+                 options: Map[String, String],
+                hadoopConf: Configuration): PartitionedFile => Iterator[InternalRow] = {
     // TODO we need to pass the extra data source meta information via the func parameter
     val (filterScanners, m) = meta match {
       case Some(x) =>
