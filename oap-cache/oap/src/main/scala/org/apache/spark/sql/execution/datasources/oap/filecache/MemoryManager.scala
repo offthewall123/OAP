@@ -20,6 +20,7 @@ package org.apache.spark.sql.execution.datasources.oap.filecache
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
 
+import com.intel.oap.common.unsafe.PersistentMemoryPlatform
 import org.apache.hadoop.fs.FSDataInputStream
 
 import org.apache.spark.SparkEnv
@@ -29,7 +30,7 @@ import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.utils.PersistentMemoryConfigUtils
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.storage.{BlockManager, TestBlockId}
-import org.apache.spark.unsafe.{PersistentMemoryPlatform, Platform}
+import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
 object CacheEnum extends Enumeration {
