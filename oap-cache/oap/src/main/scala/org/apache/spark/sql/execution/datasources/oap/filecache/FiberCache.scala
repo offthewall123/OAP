@@ -30,7 +30,12 @@ import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.unsafe.types.UTF8String
 
-case class FiberCache(fiberData: MemoryBlockHolder) extends Logging {
+object FiberType extends Enumeration {
+  type FiberType = Value
+  val INDEX, DATA, GENERAL = Value
+}
+
+case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHolder) extends Logging {
 
   // This is and only is set in `cache() of OapCache`
   // TODO: make it immutable

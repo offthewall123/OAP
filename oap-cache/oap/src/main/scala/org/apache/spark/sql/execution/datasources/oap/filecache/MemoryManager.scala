@@ -33,6 +33,11 @@ import org.apache.spark.storage.{BlockManager, TestBlockId}
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
+object SourceEnum extends Enumeration {
+  type SourceEnum = Value
+  val DRAM, PM = Value
+}
+
 object CacheEnum extends Enumeration {
   type CacheEnum = Value
   val INDEX, DATA, GENERAL, FAIL = Value

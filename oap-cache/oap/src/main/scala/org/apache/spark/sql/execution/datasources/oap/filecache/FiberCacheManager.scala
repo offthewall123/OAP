@@ -132,6 +132,8 @@ private[sql] class FiberCacheManager(
   private val SIMPLE_CACHE = "simple"
   private val DEFAULT_CACHE_STRATEGY = GUAVA_CACHE
 
+  private val cacheAllocator: CacheMemoryAllocator = CacheMemoryAllocator(sparkEnv)
+
   private var _dataCacheCompressEnable = sparkEnv.conf.get(
     OapConf.OAP_ENABLE_DATA_FIBER_CACHE_COMPRESSION)
   private var _dataCacheCompressionCodec = sparkEnv.conf.get(
@@ -163,6 +165,18 @@ private[sql] class FiberCacheManager(
       new SimpleOapCache()
     } else {
       throw new OapException(s"Unsupported cache strategy $cacheName")
+    }
+  }
+
+  def getEmptyDataFiberCache(length: Long): FiberCache = {
+    FiberCache(FiberType.DATA, allocateFiberMemory(FiberType.DATA, length))
+  }
+  private[filecache] def allocateFiberMemory(fiberType: FiberType.FiberType,
+                                             length: Long): MemoryBlockHolder = {
+    fiberType match {
+      case FiberType.DATA => cacheAllocator.allocateDataMemory(length)
+      case FiberType.INDEX => cacheAllocator.allocateIndexMemory(length)
+      case _ => throw new UnsupportedOperationException("Unsupported fiber type")
     }
   }
 
