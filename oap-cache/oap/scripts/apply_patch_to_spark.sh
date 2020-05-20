@@ -58,6 +58,7 @@ fetch_from_upstream() {
   SPARK_SOURCE_NAME=`tar -tf $TARBALL_NAME | head -1 | cut -f1 -d"/"`
   if [ $? != 0 ]; then
     exit 1
+
   fi
   SPARK_SOURCE_DIR=$DOWNLOADED_SPARK_DIR/spark_source/$SPARK_SOURCE_NAME
   if [ -d $SPARK_SOURCE_DIR ]; then
