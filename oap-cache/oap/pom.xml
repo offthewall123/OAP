@@ -293,17 +293,17 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.apache.parquet</groupId>
-        <artifactId>parquet-column</artifactId>
-        <version>${parquet.version}</version>
-        <scope>compile</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.parquet</groupId>
-        <artifactId>parquet-hadoop</artifactId>
-        <version>${parquet.version}</version>
-        <scope>compile</scope>
-      </dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-column</artifactId>
+      <version>${parquet.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-hadoop</artifactId>
+      <version>${parquet.version}</version>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>org.roaringbitmap</groupId>
       <artifactId>RoaringBitmap</artifactId>
@@ -374,37 +374,37 @@
       <artifactId>guava</artifactId>
       <version>14.0.1</version>
     </dependency>
-   <dependency>
+    <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
       <version>0.9.10</version>
       <scope>compile</scope>
-   </dependency>
-</dependencies>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
-     <plugin>
-       <inherited>true</inherited>
-       <groupId>org.apache.maven.plugins</groupId>
-       <artifactId>maven-enforcer-plugin</artifactId>
-       <version>1.3.1</version>
-         <executions>
-           <execution>
-             <id>enforce-maven-3</id>
-             <phase>validate</phase>
-             <goals>
-               <goal>enforce</goal>
-             </goals>
-             <configuration>
-               <rules>
-                 <requireMavenVersion>
-                   <version>3.3.0</version>
-                 </requireMavenVersion>
-               </rules>
-               <fail>true</fail>
-             </configuration>
-           </execution>
+      <plugin>
+        <inherited>true</inherited>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.3.1</version>
+        <executions>
+          <execution>
+            <id>enforce-maven-3</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.3.0</version>
+                </requireMavenVersion>
+              </rules>
+              <fail>true</fail>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -483,62 +483,62 @@
         </executions>
       </plugin>
       <plugin>
-          <groupId>net.alchim31.maven</groupId>
-          <artifactId>scala-maven-plugin</artifactId>
-          <version>3.2.2</version>
-          <executions>
-            <execution>
-              <id>eclipse-add-source</id>
-              <goals>
-                <goal>add-source</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>scala-compile-first</id>
-              <phase>process-resources</phase>
-              <goals>
-                <goal>compile</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>scala-test-compile-first</id>
-              <phase>process-test-resources</phase>
-              <goals>
-                <goal>testCompile</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>attach-scaladocs</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>doc-jar</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <scalaVersion>${scala.version}</scalaVersion>
-            <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
-            <recompileMode>incremental</recompileMode>
-            <useZincServer>true</useZincServer>
-            <args>
-              <arg>-unchecked</arg>
-              <arg>-deprecation</arg>
-              <arg>-feature</arg>
-            </args>
-            <jvmArgs>
-              <jvmArg>-Xms1024m</jvmArg>
-              <jvmArg>-Xmx1024m</jvmArg>
-              <jvmArg>-XX:ReservedCodeCacheSize=512m</jvmArg>
-            </jvmArgs>
-            <javacArgs>
-              <javacArg>-source</javacArg>
-              <javacArg>${java.version}</javacArg>
-              <javacArg>-target</javacArg>
-              <javacArg>${java.version}</javacArg>
-              <javacArg>-Xlint:all,-serial,-path</javacArg>
-            </javacArgs>
-          </configuration>
-        </plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.2</version>
+        <executions>
+          <execution>
+            <id>eclipse-add-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-compile-first</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile-first</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>attach-scaladocs</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>doc-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <scalaVersion>${scala.version}</scalaVersion>
+          <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
+          <recompileMode>incremental</recompileMode>
+          <useZincServer>true</useZincServer>
+          <args>
+            <arg>-unchecked</arg>
+            <arg>-deprecation</arg>
+            <arg>-feature</arg>
+          </args>
+          <jvmArgs>
+            <jvmArg>-Xms1024m</jvmArg>
+            <jvmArg>-Xmx1024m</jvmArg>
+            <jvmArg>-XX:ReservedCodeCacheSize=512m</jvmArg>
+          </jvmArgs>
+          <javacArgs>
+            <javacArg>-source</javacArg>
+            <javacArg>${java.version}</javacArg>
+            <javacArg>-target</javacArg>
+            <javacArg>${java.version}</javacArg>
+            <javacArg>-Xlint:all,-serial,-path</javacArg>
+          </javacArgs>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
@@ -700,14 +700,14 @@
             <id>add-test-source</id>
             <phase>generate-sources</phase>
             <goals>
-                <goal>add-test-source</goal>
+              <goal>add-test-source</goal>
             </goals>
             <configuration>
-                <sources>
-                    <source>src/test/oap-perf-suite</source>
-                </sources>
+              <sources>
+                <source>src/test/oap-perf-suite</source>
+              </sources>
             </configuration>
-          </execution>  
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -732,5 +732,83 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>numa-binding</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-yarn_${scala.binary.version}</artifactId>
+          <version>${spark.internal.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-yarn_${scala.binary.version}</artifactId>
+          <version>${spark.internal.version}</version>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.8</version>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <tasks>
+                    <echo>Copy numa pacthed file as OAP source code</echo>
+                    <copy todir="${basedir}/oap-cache/oap/src/main/spark${spark.internal.version}/scala/org/apache/spark/deploy/yarn/">
+                      <resources>
+                        <file file="${basedir}/patched_file/ApplicationMaster.scala"/>
+                        <file file="${basedir}/patched_file/ExecutorRunnable.scala"/>
+                        <file file="${basedir}/patched_file/YarnAllocator.scala"/>
+                        <file file="${basedir}/patched_file/config.scala"/>
+                      </resources>
+                    </copy>
+                    <copy file="${basedir}/patched_file/CoarseGrainedExecutorBackend.scala"
+                          todir="${basedir}/src/main/spark${spark.internal.version}/scala/org/apache/spark/executor/"/>
+
+                    <copy todir="${basedir}/src/main/spark${spark.internal.version}/scala/org/apache/spark/sql/execution/joins/">
+                      <resources>
+                        <file file="${basedir}/patched_file/BroadcastHashJoinExec.scala"/>
+                        <file file="${basedir}/patched_file/HashJoin.scala"/>
+                        <file file="${basedir}/patched_file/HashedRelation.scala"/>
+                        <file file="${basedir}/patched_file/ShuffledHashJoinExec.scala"/>
+                      </resources>
+                    </copy>
+                  </tasks>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>exec-maven-plugin</artifactId>
+            <groupId>org.codehaus.mojo</groupId>
+            <version>${exec.maven.version}</version>
+            <executions>
+              <execution>
+                <id>Apply numa patch to OAP</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${basedir}/scripts/apply_patch_to_oap.sh</executable>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
