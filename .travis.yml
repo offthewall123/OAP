@@ -57,5 +57,3 @@ jobs:
       - mvn clean package -DskipTests #skip core tests
       - cd ${TRAVIS_BUILD_DIR}/oap-data-source/arrow
       - mvn clean -q tests
-      
-      
