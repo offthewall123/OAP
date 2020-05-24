@@ -769,7 +769,7 @@
                 <configuration>
                   <tasks>
                     <echo>Copy numa pacthed file as OAP source code</echo>
-                    <copy todir="${basedir}/src/main/spark${spark.internal.version}/scala/org/apache/spark/deploy/yarn/">
+                    <copy todir="${basedir}/src/main/spark2.3.2/scala/org/apache/spark/deploy/yarn/">
                       <resources>
                         <file file="${basedir}/patched_file/ApplicationMaster.scala"/>
                         <file file="${basedir}/patched_file/ExecutorRunnable.scala"/>
@@ -778,9 +778,9 @@
                       </resources>
                     </copy>
                     <copy file="${basedir}/patched_file/CoarseGrainedExecutorBackend.scala"
-                          todir="${basedir}/src/main/spark${spark.internal.version}/scala/org/apache/spark/executor/"/>
+                          todir="${basedir}/src/main/spark2.3.2/scala/org/apache/spark/executor/"/>
 
-                    <copy todir="${basedir}/src/main/spark${spark.internal.version}/scala/org/apache/spark/sql/execution/joins/">
+                    <copy todir="${basedir}/src/main/spark2.3.2/scala/org/apache/spark/sql/execution/joins/">
                       <resources>
                         <file file="${basedir}/patched_file/BroadcastHashJoinExec.scala"/>
                         <file file="${basedir}/patched_file/HashJoin.scala"/>

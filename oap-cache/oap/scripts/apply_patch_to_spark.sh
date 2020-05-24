@@ -72,12 +72,18 @@ patch_to_spark() {
   # TODO: we'd better use /usr/bin/patch to apply patch. Here seems the current patch file is not applicable
   check_git_exist
   cd $SPARK_SOURCE_DIR
+  echo $SPARK_SOURCE_DIR
 
-#  if ! [ -d .git ]; then
-#    $GIT init
-#  fi
+  if ! [ -d .git ]; then
+    $GIT init
+  fi
 
+  echo '1111111111111111111111'
+  echo $PATCH_DIR
+  echo '22222222222222222222222222222'
+  echo $UPSTREAM_SPARK_VERSION
   $GIT apply $PATCH_DIR/$UPSTREAM_SPARK_VERSION/*.patch
+  echo $PATCH_DIR/$UPSTREAM_SPARK_VERSION
   if [ $? != 0 ]; then
     echo "Fail to apply the patch to spark. Please try to solve conflicts if you are using custom spark."
     exit 1
