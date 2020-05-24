@@ -769,7 +769,7 @@
                 <configuration>
                   <tasks>
                     <echo>Copy numa pacthed file as OAP source code</echo>
-                    <copy todir="${basedir}/oap-cache/oap/src/main/spark${spark.internal.version}/scala/org/apache/spark/deploy/yarn/">
+                    <copy todir="${basedir}/src/main/spark${spark.internal.version}/scala/org/apache/spark/deploy/yarn/">
                       <resources>
                         <file file="${basedir}/patched_file/ApplicationMaster.scala"/>
                         <file file="${basedir}/patched_file/ExecutorRunnable.scala"/>
