@@ -73,9 +73,9 @@ patch_to_spark() {
   check_git_exist
   cd $SPARK_SOURCE_DIR
 
-  if ! [ -d .git ]; then
-    $GIT init
-  fi
+#  if ! [ -d .git ]; then
+#    $GIT init
+#  fi
 
   $GIT apply $PATCH_DIR/$UPSTREAM_SPARK_VERSION/*.patch
   if [ $? != 0 ]; then
