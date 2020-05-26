@@ -12,12 +12,12 @@ To use optimized Plasma cache with OAP, you need following components:
     2. plasma-store-server: executable file, plasma cache service.  
     3. arrow-plasma-0.17.0.jar: will be used when compile oap and spark runtime also need it. 
     
-    i and ii will provided as rpm package, these can be download on link xxx, or try `yum install intel-arrow-0.17.0`   
-    And iii will be provided in maven central repo, you need add xxx config     
-    //TODO: binary package, multi os/distribution support? update this jar to maven central repository. Maybe need a rename?
+    1 and 2 will be provided as rpm package, we provide fedora 29 and Cent OS 7.6 rpm package, you can download it on release page.
+    3 will be provided in maven central repo, you can also get it on release page. You need to download it and copy to `$SPARK_HOME/jars` dir.
+
    
 ### build Plasma related files manually
-1. so file and binary file  
+#### so file and binary file  
   clone code from Intel-arrow repo and run following commands, this will install libplasma.so, libarrow.so, libplasma_jni.so and plasma-store-server to your system path(/usr/lib64 by default). And if you are using spark in a cluster environment, you can copy these files to all nodes in your cluster if os or distribution are same, otherwise, you need compile it on each node.
   
 ```
@@ -28,17 +28,17 @@ cd cpp
 mkdir release
 cd release
 #build libarrow, libplasma, libplasma_java
-cmake -DCMAKE_INSTALL_PREFIX=/usr/ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g -O3"  -DCMAKE_CXX_FLAGS="-g -O3" -DARROW_BUILD_TESTS=on -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED  ..
+cmake -DCMAKE_INSTALL_PREFIX=/usr/ -DCMAKE_BUILD_TYPE=Release -DARROW_BUILD_TESTS=on -DARROW_PLASMA_JAVA_CLIENT=on -DARROW_PLASMA=on -DARROW_DEPENDENCY_SOURCE=BUNDLED  ..
 make -j$(nproc)
 sudo make install -j$(nproc)
 ```
 
-2. arrow-plasma-0.17.0.jar  
-   change to arrow repo java direction, run command, this will install arrow jars to your local maven repo, and you can compile oap-cache package now. Beisdes, you need copy arrow-plasma-0.17.0.jar to `$SPARK_HOME/jars/` dir, cause this jar is needed when using external cache.
+#### arrow-plasma-0.17.0.jar  
+   change to arrow repo java direction, run following command, this will install arrow jars to your local maven repo, and you can compile oap-cache package now. Beisdes, you need copy arrow-plasma-0.17.0.jar to `$SPARK_HOME/jars/` dir, cause this jar is needed when using external cache.
    
 ```
 cd $ARROW_REPO_DIR/java
-mvn clean -q -DskipTests install
+mvn clean -q -pl plasma -DskipTests install
 ```
 
 ## How to Run Spark-sql with Plasma
@@ -80,11 +80,11 @@ plasma-store-server -m 30000000000 -s /tmp/plasmaStore -e vmemcache://size:49000
     vmemcache: using vmemcahe as external store
     size: how much Bytes external store will use on pmem per numa node
 ```
+ Remember to kill `plasma-store-server` process if you no longer need cache, and you should delete `/tmp/plasmaStore` which is a Unix domain socket.  
 
 #### using yarn start plamsa service
- we can use yarn(hadoop version >= 3.1) to start plasma service, you should provide a yaml file like xxx.
+ we can use yarn(hadoop version >= 3.1) to start plasma service, you should provide a yaml file like following.
 
-### start Saprk-sql and run workload.
  
   
   
