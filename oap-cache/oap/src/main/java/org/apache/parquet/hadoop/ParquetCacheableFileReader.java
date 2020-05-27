@@ -69,7 +69,8 @@
 //      this.dataFile = new ParquetDataFile(file.toUri().toString(), new StructType(), conf);
 //      List<String[]> paths = footer.getFileMetaData().getSchema().getPaths();
 //      int size = paths.size();
-//      // TODO only required columns needed in pathToColumnIndexMap, but include all columns for now,
+//      // TODO only required columns needed in pathToColumnIndexMap,
+//      // but include all columns for now,
 //      // better to do the filter.
 //      pathToColumnIndexMap = Maps.newHashMapWithExpectedSize(size);
 //      for (int i = 0; i < size; i++) {
