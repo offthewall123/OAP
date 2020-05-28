@@ -69,8 +69,35 @@ spark.sql.oap.cache.external.client.pool.size              10
 #### start plasma service manually
  you can start plasma service on every node as following command
 ```
-plasma-store-server -m 30000000000 -s /tmp/plasmaStore -e vmemcache://size:49000000000 &
+plasma-store-server -m 15000000000 -s /tmp/plasmaStore -t 1 -e vmemcache://propertyFilePath:/tmp/persistent-memory.properties,
+                                                               totalNumaNodeNum:2,numaNodeId1:1,initialPath1:/mnt/pmem0,requiredSize1:15000000,readPoolSize1:12,writePoolSize1:12?numaNodeId2:2,initialPath2:/mnt/pmem1,requiredSize2:1500000,readPoolSize2:12,writePoolSize2:12
 ```    
+It's recommended to use propertyFilePath to pass parameters.
+An example persistent-memory.properties:
+
+```$xslt
+    # Example
+    totalNumaNodeNum = 2
+    
+    numaNodeId1 = 1
+    initialPath1 = /mnt/pmem0
+    requiredSize1 = 15000000
+    readPoolSize1 = 12 
+    writePoolSize1 = 12
+    
+    numaNodeId2 = 2
+    initialPath2 = /mnt/pmem1
+    requiredSize2 = 15000000
+    readPoolSize2 = 12 
+    writePoolSize2 = 12
+```
+Or you can write these parameters directly in your starting command.Use "?" to seperate different numaNodes.
+
+```requiredSize readPoolSize writePoolSize``` is optional,will use default value if you don't pass these three parameters.
+But please remember to pass ```totalNumaNodeNum``` and ```initialPath```.
+
+*Please note that parameters in the command will cover parameters in persistent-memory.properties.*
+
  plasma config parameters:  
  
 ```
