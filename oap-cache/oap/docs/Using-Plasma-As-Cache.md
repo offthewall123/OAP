@@ -89,20 +89,20 @@ plasma-store-server -m 15000000000 -s /tmp/plasmaStore -e vmemcache://propertyFi
 An example persistent-memory.properties:
 
 ```
-    # Example
-    totalNumaNodeNum = 2
+  # Example
+  totalNumaNodeNum = 2
     
-    numaNodeId1 = 1
-    initialPath1 = /mnt/pmem0
-    requiredSize1 = 15000000
-    readPoolSize1 = 12 
-    writePoolSize1 = 12
+  numaNodeId1 = 1
+  initialPath1 = /mnt/pmem0
+  requiredSize1 = 15000000
+  readPoolSize1 = 12 
+  writePoolSize1 = 12
     
-    numaNodeId2 = 2
-    initialPath2 = /mnt/pmem1
-    requiredSize2 = 15000000
-    readPoolSize2 = 12 
-    writePoolSize2 = 12
+  numaNodeId2 = 2
+  initialPath2 = /mnt/pmem1
+  requiredSize2 = 15000000
+  readPoolSize2 = 12 
+  writePoolSize2 = 12
 ```
 
 ```requiredSize readPoolSize writePoolSize``` is optional,will use default value if you don't pass these three parameters.
