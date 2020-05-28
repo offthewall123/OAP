@@ -96,7 +96,7 @@ Or you can write these parameters directly in your starting command.Use "?" to s
 ```requiredSize readPoolSize writePoolSize``` is optional,will use default value if you don't pass these three parameters.
 But please remember to pass ```totalNumaNodeNum``` and ```initialPath```.
 
-`_Please note that parameters in the command will cover parameters in persistent-memory.properties._`
+*Please note that parameters in the command will cover parameters in persistent-memory.properties.*
 
  plasma config parameters:  
  
