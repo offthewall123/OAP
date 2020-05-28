@@ -108,11 +108,4 @@ But please remember to pass ```totalNumaNodeNum``` and ```initialPath```.
     size: how much Bytes external store will use on pmem per numa node
 ```
  Remember to kill `plasma-store-server` process if you no longer need cache, and you should delete `/tmp/plasmaStore` which is a Unix domain socket.  
-
-#### using yarn start plamsa service
- we can use yarn(hadoop version >= 3.1) to start plasma service, you should provide a yaml file like following.
-
- 
-  
-  
   
