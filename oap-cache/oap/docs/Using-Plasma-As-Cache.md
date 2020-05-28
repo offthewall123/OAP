@@ -75,7 +75,7 @@ plasma-store-server -m 15000000000 -s /tmp/plasmaStore -t 1 -e vmemcache://prope
 It's recommended to use propertyFilePath to pass parameters.
 An example persistent-memory.properties:
 
-```$xslt
+```
     # Example
     totalNumaNodeNum = 2
     
