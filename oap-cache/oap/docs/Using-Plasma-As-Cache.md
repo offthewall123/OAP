@@ -13,6 +13,7 @@ To use optimized Plasma cache with OAP, you need following components:
     3. arrow-plasma-0.17.0.jar: will be used when compile oap and spark runtime also need it. 
     
     1 and 2 will be provided as rpm package, we provide fedora 29 and Cent OS 7.6 rpm package, you can download it on release page.
+    Run rpm -ivh arrow-plasma-intel-libs-0.17.0-1*x86_64.rpm to install it. 
     3 will be provided in maven central repo, you can also get it on release page. You need to download it and copy to `$SPARK_HOME/jars` dir.
 
    
@@ -66,7 +67,7 @@ spark.sql.oap.cache.external.client.pool.size              10
 ```
 
 
-#### start plasma service manually
+#### Start plasma service manually
 
  plasma config parameters:  
  ```
@@ -111,3 +112,27 @@ But please remember to pass ```totalNumaNodeNum``` and ```initialPath```.
 
  Remember to kill `plasma-store-server` process if you no longer need cache, and you should delete `/tmp/plasmaStore` which is a Unix domain socket.  
   
+#### Use yarn to start plamsa service
+We can use yarn(hadoop version >= 3.1) to start plasma service, you should provide a json file like following.
+```
+{
+  "name": "plasma-store-service",
+  "version": 1,
+  "components" :
+  [
+   {
+     "name": "plasma-store-service",
+     "number_of_containers": 3,
+     "launch_command": "plasma-store-server -m 15000000000 -s /tmp/plasmaStore -t 1 -e vmemcache://size:495000000000",
+     "resource": {
+       "cpus": 1,
+       "memory": 512
+     }
+   }
+  ]
+}
+```
+
+Run command  ```yarn app -launch plasma-store-service /tmp/plasmaLaunch.json``` to start plasma server.
+Run ```yarn app -stop plasma-store-service``` to stop it.
+Run ```yarn app -destroy plasma-store-service```to destroy it.
