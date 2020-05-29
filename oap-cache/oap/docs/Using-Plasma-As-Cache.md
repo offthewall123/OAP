@@ -82,9 +82,14 @@ spark.sql.oap.cache.external.client.pool.size              10
 You can start plasma service on each node as following command
 
 ```
-plasma-store-server -m 15000000000 -s /tmp/plasmaStore -e vmemcache://propertyFilePath:/tmp/persistent-memory.properties,
-                                                               totalNumaNodeNum:2,numaNodeId1:1,initialPath1:/mnt/pmem0,requiredSize1:15000000,readPoolSize1:12,writePoolSize1:12?numaNodeId2:2,initialPath2:/mnt/pmem1,requiredSize2:1500000,readPoolSize2:12,writePoolSize2:12
-```    
+plasma-store-server -m 15000000000 -s /tmp/plasmaStore -e vmemcache://propertyFilePath:/tmp/persistent-memory.properties  
+```
+or 
+``` 
+plasma-store-server -m 15000000000 -s /tmp/plasmaStore -e vmemcache://totalNumaNodeNum:2,\
+numaNodeId1:1,initialPath1:/mnt/pmem0,requiredSize1:15000000,readPoolSize1:12,writePoolSize1:12\
+?numaNodeId2:2,initialPath2:/mnt/pmem1,requiredSize2:15000000,readPoolSize2:12,writePoolSize2:12
+```
 
 An example persistent-memory.properties:
 
@@ -123,7 +128,7 @@ We can use yarn(hadoop version >= 3.1) to start plasma service, you should provi
    {
      "name": "plasma-store-service",
      "number_of_containers": 3,
-     "launch_command": "plasma-store-server -m 15000000000 -s /tmp/plasmaStore -t 1 -e vmemcache://size:495000000000",
+     "launch_command": "plasma-store-server -m 15000000000 -s /tmp/plasmaStore -e vmemcache://propertyFilePath:/tmp/persistent-memory.properties ",
      "resource": {
        "cpus": 1,
        "memory": 512
@@ -133,6 +138,6 @@ We can use yarn(hadoop version >= 3.1) to start plasma service, you should provi
 }
 ```
 
-Run command  ```yarn app -launch plasma-store-service /tmp/plasmaLaunch.json``` to start plasma server.
-Run ```yarn app -stop plasma-store-service``` to stop it.
+Run command  ```yarn app -launch plasma-store-service /tmp/plasmaLaunch.json``` to start plasma server.  
+Run ```yarn app -stop plasma-store-service``` to stop it.  
 Run ```yarn app -destroy plasma-store-service```to destroy it.
