@@ -8,13 +8,13 @@
 ## How to build
 ### what you need 
 To use optimized Plasma cache with OAP, you need following components:  
-    1. libarrow.so, libplasma.so, libplasma_jni.so: dynamic libraries, will be used in plasma client.   
-    2. plasma-store-server: executable file, plasma cache service.  
-    3. arrow-plasma-0.17.0.jar: will be used when compile oap and spark runtime also need it. 
+    (1) libarrow.so, libplasma.so, libplasma_jni.so: dynamic libraries, will be used in plasma client.   
+    (2) plasma-store-server: executable file, plasma cache service.  
+    (3) arrow-plasma-0.17.0.jar: will be used when compile oap and spark runtime also need it. 
     
-    1 and 2 will be provided as rpm package, we provide fedora 29 and Cent OS 7.6 rpm package, you can download it on release page.
-    Run rpm -ivh arrow-plasma-intel-libs-0.17.0-1*x86_64.rpm to install it. 
-    3 will be provided in maven central repo, you can also get it on release page. You need to download it and copy to `$SPARK_HOME/jars` dir.
+(1) and (2) will be provided as rpm package, we provide fedora 29 and Cent OS 7.6 rpm package, you can download it on release page.
+Run `rpm -ivh arrow-plasma-intel-libs-0.17.0-1*x86_64.rpm` to install it.   
+(3) will be provided in maven central repo, you can also get it on release page. You need to download it and copy to `$SPARK_HOME/jars` dir.
 
    
 ### build Plasma related files manually
