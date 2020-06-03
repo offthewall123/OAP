@@ -10,3 +10,8 @@ SparkEnv.scala
 StorageLevel.scala
 spark/memory/TestMemoryManager.scala
 UnifiedMemoryManager.scala
+
+FileFormatDataWriter.scala
+FileFormatWriter.scala
+OutputWriter.scala
+DataSourceScanExec.scala
