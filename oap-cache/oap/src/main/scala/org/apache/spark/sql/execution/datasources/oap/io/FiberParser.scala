@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.parquet.bytes.BytesInput
 import org.apache.parquet.column.Dictionary
 import org.apache.parquet.column.values.deltastrings.DeltaByteArrayReader
@@ -24,7 +25,6 @@ import org.apache.parquet.column.values.dictionary.DictionaryValuesReader
 import org.apache.parquet.format.Encoding
 
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.collection.OapBitSet
 
 private[oap] trait DataFiberParser {

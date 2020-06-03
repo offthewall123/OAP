@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.parquet.bytes.{BytesInput, HeapByteBufferAllocator}
 import org.apache.parquet.column.values.deltastrings.DeltaByteArrayWriter
 import org.apache.parquet.column.values.dictionary.DictionaryValuesWriter.{PlainBinaryDictionaryValuesWriter, PlainIntegerDictionaryValuesWriter}
@@ -26,7 +27,6 @@ import org.apache.parquet.io.api.Binary
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.oap.filecache.{DataFiberBuilder, FiberByteData}
 import org.apache.spark.sql.types.{BinaryType, DataType, IntegerType, StringType}
-import org.apache.spark.unsafe.Platform
 
 private[oap] case class DeltaByteArrayFiberBuilder (
     defaultRowGroupRowCount: Int,

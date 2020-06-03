@@ -28,6 +28,7 @@ import scala.util.Success
 
 import com.google.common.cache._
 import com.google.common.hash._
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import com.intel.oap.common.unsafe.VMEMCacheJNI
 import org.apache.arrow.plasma
 import org.apache.arrow.plasma.exceptions.{DuplicateObjectException, PlasmaClientException}
@@ -41,7 +42,6 @@ import org.apache.spark.sql.execution.datasources.oap.filecache.FiberType.FiberT
 import org.apache.spark.sql.execution.datasources.oap.utils.PersistentMemoryConfigUtils
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.oap.OapRuntime
-import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
 private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends CacheGuardian(maxMemory)

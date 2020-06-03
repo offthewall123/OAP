@@ -17,12 +17,12 @@
 
 package org.apache.spark.sql.execution.datasources.oap.filecache
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.hadoop.fs.FSDataInputStream
 import org.apache.parquet.io.SeekableInputStream
 
 import org.apache.spark.sql.execution.datasources.oap.io.DataFile
 import org.apache.spark.sql.oap.OapRuntime
-import org.apache.spark.unsafe.Platform
 
 private[oap] abstract class FiberId {
   def toFiberKey(): String = {

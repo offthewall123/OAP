@@ -17,13 +17,13 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntList
 
 import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
 import org.apache.spark.sql.execution.vectorized.OnHeapColumnVector
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.Platform
 
 class ParquetDataFaultFiberReader(fiberCache: FiberCache, dataType: DataType, total: Int)
   extends ParquetDataFiberReader(

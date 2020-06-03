@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.execution.datasources.oap.io
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.parquet.column.{Dictionary, Encoding}
 import org.apache.parquet.io.api.Binary
 import org.apache.parquet.it.unimi.dsi.fastutil.ints.IntList
@@ -28,7 +29,7 @@ import org.apache.spark.sql.execution.datasources.parquet.ParquetDictionaryWrapp
 import org.apache.spark.sql.execution.vectorized.OnHeapColumnVector
 import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.Platform
+
 
 /**
  * ParquetDataFiberWriter is a util use to write OnHeapColumnVector data to data fiber.

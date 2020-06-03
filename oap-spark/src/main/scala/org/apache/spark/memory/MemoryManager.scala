@@ -19,12 +19,13 @@ package org.apache.spark.memory
 
 import javax.annotation.concurrent.GuardedBy
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
+
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
 import org.apache.spark.storage.BlockId
 import org.apache.spark.storage.memory.MemoryStore
-import org.apache.spark.unsafe.Platform
 import org.apache.spark.unsafe.array.ByteArrayMethods
 import org.apache.spark.unsafe.memory.MemoryAllocator
 

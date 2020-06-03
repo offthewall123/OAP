@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import scala.util.Success
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import com.intel.oap.common.unsafe.PersistentMemoryPlatform
 
 import org.apache.spark.SparkEnv
@@ -33,7 +34,6 @@ import org.apache.spark.sql.execution.datasources.oap.filecache.FiberType.FiberT
 import org.apache.spark.sql.execution.datasources.oap.utils.PersistentMemoryConfigUtils
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.storage.{BlockManager, TestBlockId}
-import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
 object SourceEnum extends Enumeration {

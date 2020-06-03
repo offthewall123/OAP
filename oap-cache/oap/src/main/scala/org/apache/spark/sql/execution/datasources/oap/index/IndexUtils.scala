@@ -19,6 +19,7 @@ package org.apache.spark.sql.execution.datasources.oap.index
 
 import java.io.OutputStream
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
@@ -46,7 +47,6 @@ import org.apache.spark.sql.hive.orc.ReadOnlyOrcFileFormat
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.types.MetadataBuilder
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.unsafe.Platform
 
 /**
  * Utils for Index read/write

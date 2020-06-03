@@ -16,13 +16,14 @@
  */
 package org.apache.spark.sql.execution.vectorized;
 
+import com.intel.oap.common.sparkutils.unsafe.Platform;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
 import org.apache.spark.sql.execution.datasources.parquet.ParquetDictionaryWrapper;
 import org.apache.spark.sql.types.*;
-import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.types.UTF8String;
 
 /**

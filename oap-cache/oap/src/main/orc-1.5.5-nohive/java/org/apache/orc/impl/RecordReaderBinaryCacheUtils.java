@@ -17,6 +17,8 @@
  */
 package org.apache.orc.impl;
 
+import com.intel.oap.common.sparkutils.unsafe.Platform;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -29,7 +31,6 @@ import org.apache.spark.sql.execution.datasources.oap.io.DataFile;
 import org.apache.spark.sql.execution.datasources.oap.io.OrcDataFile;
 import org.apache.spark.sql.oap.OapRuntime$;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.unsafe.Platform;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

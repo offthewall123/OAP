@@ -19,6 +19,7 @@ package org.apache.spark.sql.execution.datasources.oap.io
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream}
 
+import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.parquet.column.Dictionary
 import org.apache.parquet.io.api.Binary
 import scala.collection.mutable
@@ -32,7 +33,6 @@ import org.apache.spark.sql.execution.datasources.parquet.{ParquetDictionaryWrap
 import org.apache.spark.sql.execution.vectorized.OnHeapColumnVector
 import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.Platform
 
 /**
  * ParquetDataFiberCompressedWriter is a util use to write compressed OnHeapColumnVector data
