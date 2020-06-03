@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.execution.datasources.oap.filecache
 
-import org.apache.spark.SparkEnv
+import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.internal.oap.OapConf
 
@@ -25,19 +25,20 @@ import org.apache.spark.sql.internal.oap.OapConf
  * A cache memory allocator which handles memory allocating from underlayer
  * memory manager and handles index and data cache seperation.
  */
-private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
+private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv,
+                                              conf: SparkConf,
+                                              memoryManagerOpt: String,
+                                              cacheName: String,
+                                              cacheStrategyOpt: String,
+                                              cacheRatio: scala.Double)
   extends Logging {
-  private val _separateMemory = checkSeparateMemory()
-  private val (memoryManager, indexMemoryManager) = init()
+  private val _separateMemory = checkSeparateMemory(memoryManagerOpt, cacheName)
+  private val (memoryManager, indexMemoryManager) = init(cacheStrategyOpt, memoryManagerOpt)
   private val (_dataCacheMemorySize, _indexCacheMemorySize,
-              _dataCacheGuardianMemorySize, _indexCacheGuardianMemorySize) = calculateSizes()
+              _dataCacheGuardianMemorySize,
+              _indexCacheGuardianMemorySize) = calculateSizes(cacheRatio)
 
-  private def checkSeparateMemory(): Boolean = {
-    val memoryManagerOpt =
-      sparkEnv.conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
-    val cacheName =
-      sparkEnv.conf.get(OapConf.OAP_FIBERCACHE_STRATEGY.key, "guava").toLowerCase
-
+  private def checkSeparateMemory(memoryManagerOpt: String, cacheName: String): Boolean = {
     memoryManagerOpt match {
       case ("mix") => if (cacheName.equals("mix")) {
         true
@@ -48,15 +49,12 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
       case _ => false
     }
   }
-  private def calculateSizes(): (Long, Long, Long, Long) = {
+  private def calculateSizes(cacheRatio: scala.Double): (Long, Long, Long, Long) = {
     // TO DO: make the 0.9 : 0.1 ration configurable
     if (_separateMemory) {
       ((memoryManager.memorySize * 0.9).toLong, (indexMemoryManager.memorySize * 0.9).toLong,
         (memoryManager.memorySize * 0.1).toLong, (indexMemoryManager.memorySize * 0.1).toLong)
     } else {
-      val cacheRatio = sparkEnv.conf.getDouble(
-        OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.key,
-        OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.defaultValue.get)
       require(cacheRatio >= 0 && cacheRatio <= 1,
         "Data and index cache ratio should be between 0 and 1")
 
@@ -67,10 +65,15 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
     }
   }
 
-  private def init(): (MemoryManager, MemoryManager) = {
+  private def init(cacheStrategyOpt: String,
+                   memoryManagerOpt: String): (MemoryManager, MemoryManager) = {
     if (_separateMemory) {
-      val dataManager = MemoryManager(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, FiberType.DATA)
-      val indexManager = MemoryManager(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, FiberType.INDEX)
+      val dataManager = MemoryManager(sparkEnv, conf,
+        OapConf.OAP_FIBERCACHE_STRATEGY,
+        FiberType.DATA, cacheStrategyOpt, memoryManagerOpt)
+      val indexManager = MemoryManager(sparkEnv, conf,
+        OapConf.OAP_FIBERCACHE_STRATEGY,
+        FiberType.INDEX, cacheStrategyOpt, memoryManagerOpt)
       if (indexManager.getClass.equals(dataManager.getClass)) {
         throw new UnsupportedOperationException(
           "Index Cache type and Data Cache type need to be different in Mixed mode")
@@ -78,7 +81,8 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
 
       (dataManager, indexManager)
     } else {
-      val manager = MemoryManager(sparkEnv)
+      val manager = MemoryManager(sparkEnv, conf,
+        cacheStrategyOpt, memoryManagerOpt)
       (manager, null)
     }
   }
@@ -127,7 +131,17 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
 }
 
 private[sql] object CacheMemoryAllocator {
-  def apply(sparkEnv: SparkEnv): CacheMemoryAllocator = {
-    new CacheMemoryAllocator(sparkEnv)
+  def apply(sparkEnv: SparkEnv,
+            conf: SparkConf,
+            memoryManagerOpt: String,
+            cacheName: String,
+            cacheStrategyOpt: String,
+            cacheRatio: scala.Double): CacheMemoryAllocator = {
+    new CacheMemoryAllocator(sparkEnv,
+      conf,
+      memoryManagerOpt,
+      cacheName,
+      cacheStrategyOpt,
+      cacheRatio)
   }
 }

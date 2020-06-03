@@ -25,7 +25,7 @@ import scala.util.Success
 import com.intel.oap.common.sparkutils.unsafe.Platform
 import com.intel.oap.common.unsafe.PersistentMemoryPlatform
 
-import org.apache.spark.SparkEnv
+import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.ConfigEntry
 import org.apache.spark.memory.MemoryMode
@@ -118,8 +118,15 @@ private[sql] object MemoryManager extends Logging {
     }
   }
 
-  def apply(sparkEnv: SparkEnv): MemoryManager = {
-    apply(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, FiberType.DATA)
+  def apply(sparkEnv: SparkEnv,
+            conf: SparkConf,
+            cacheStrategyOpt: String,
+            memoryManagerOpt: String): MemoryManager = {
+    apply(sparkEnv,
+      conf,
+      OapConf.OAP_FIBERCACHE_STRATEGY,
+      FiberType.DATA, cacheStrategyOpt,
+      memoryManagerOpt)
   }
 
 
@@ -135,15 +142,12 @@ private[sql] object MemoryManager extends Logging {
     }
   }
 
-  def apply(sparkEnv: SparkEnv, configEntry: ConfigEntry[String],
-            fiberType: FiberType): MemoryManager = {
-    val conf = sparkEnv.conf
-    val cacheStrategyOpt =
-      conf.get(
-        configEntry.key,
-        configEntry.defaultValue.get).toLowerCase
-    val memoryManagerOpt =
-      conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
+  def apply(sparkEnv: SparkEnv,
+            conf: SparkConf,
+            configEntry: ConfigEntry[String],
+            fiberType: FiberType, cacheStrategyOpt: String,
+            memoryManagerOpt: String): MemoryManager = {
+
     checkConfCompatibility(cacheStrategyOpt, memoryManagerOpt)
     cacheStrategyOpt match {
       case "guava" => apply(sparkEnv, memoryManagerOpt)

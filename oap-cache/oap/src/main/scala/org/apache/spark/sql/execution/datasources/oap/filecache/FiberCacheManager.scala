@@ -25,7 +25,7 @@ import com.google.common.cache._
 import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.hadoop.fs.FSDataInputStream
 
-import org.apache.spark.SparkEnv
+import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.io._
@@ -36,7 +36,12 @@ import org.apache.spark.util.Utils
 import org.apache.spark.util.collection.OapBitSet
 
 private[sql] class FiberCacheManager(
-    sparkEnv: SparkEnv) extends Logging {
+    sparkEnv: SparkEnv,
+    conf: SparkConf,
+    memoryManagerOpt: String,
+    cacheName: String,
+    cacheStrategyOpt: String,
+    cacheRatio: scala.Double) extends Logging {
   private val GUAVA_CACHE = "guava"
   private val SIMPLE_CACHE = "simple"
   private val NO_EVICT_CACHE = "noevict"
@@ -54,7 +59,12 @@ private[sql] class FiberCacheManager(
 
   private val _dcpmmWaitingThreshold = sparkEnv.conf.get(OapConf.DCPMM_FREE_WAIT_THRESHOLD)
 
-  private val cacheAllocator: CacheMemoryAllocator = CacheMemoryAllocator(sparkEnv)
+  private val cacheAllocator: CacheMemoryAllocator = CacheMemoryAllocator(sparkEnv,
+    conf,
+    memoryManagerOpt,
+    cacheName,
+    cacheStrategyOpt,
+    cacheRatio)
   private val fiberLockManager = new FiberLockManager()
 
   var dataCacheMemorySize: Long = cacheAllocator.dataCacheMemorySize

@@ -23,12 +23,14 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.{SparkConf, SparkContext, SparkEnv}
 import org.apache.spark.internal.Logging
+import org.apache.spark.internal.config.ConfigEntry
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.OapMetricsManager
 import org.apache.spark.sql.execution.datasources.oap.filecache._
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberSensor.HostFiberCache
 import org.apache.spark.sql.hive.thriftserver.OapEnv
+import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.oap.rpc._
 import org.apache.spark.util.{RpcUtils, Utils}
 
@@ -52,7 +54,11 @@ private[oap] trait OapRuntime extends Logging {
 /**
  * Initializing [[FiberSensor]] and executor managers if local
  */
-private[sql] class OapDriverRuntime(sparkEnv: SparkEnv) extends OapRuntime {
+private[sql] class OapDriverRuntime(sparkEnv: SparkEnv,
+                                    memoryManagerOpt: String,
+                                    cacheName: String,
+                                    cacheStrategyOpt: String,
+                                    cacheRatio: scala.Double) extends OapRuntime {
 
   // For non-Spark SQL CLI/ThriftServer conditions, OAP-specific features will be fully enabled by
   // this, nevertheless not instantly when a Spark application is started, but when an OapRuntime
@@ -69,7 +75,12 @@ private[sql] class OapDriverRuntime(sparkEnv: SparkEnv) extends OapRuntime {
   override val fiberSensor = new FiberSensor(
     new ConcurrentHashMap[String, ArrayBuffer[HostFiberCache]])
   override val fiberCacheManager =
-    if (OapRuntime.isLocal(sparkEnv.conf)) new FiberCacheManager(sparkEnv) else null
+    if (OapRuntime.isLocal(sparkEnv.conf)) new FiberCacheManager(sparkEnv,
+      sparkEnv.conf,
+      memoryManagerOpt,
+      cacheName,
+      cacheStrategyOpt,
+      cacheRatio) else null
   private val oapRpcManagerMasterEndpoint =
     new OapRpcManagerMasterEndpoint(sparkEnv.rpcEnv, SparkContext.getOrCreate().listenerBus)
   private val oapRpcDriverEndpoint = {
@@ -104,8 +115,18 @@ private[sql] class OapDriverRuntime(sparkEnv: SparkEnv) extends OapRuntime {
 /**
  * Initializing [[FiberCacheManager]]
  */
-private[oap] class OapExecutorRuntime(sparkEnv: SparkEnv) extends OapRuntime {
-  override val fiberCacheManager = new FiberCacheManager(sparkEnv)
+private[oap] class OapExecutorRuntime(sparkEnv: SparkEnv,
+                                      conf: SparkConf,
+                                      memoryManagerOpt: String,
+                                      cacheName: String,
+                                      cacheStrategyOpt: String,
+                                      cacheRatio: scala.Double) extends OapRuntime {
+  override val fiberCacheManager = new FiberCacheManager(sparkEnv,
+                                                         conf,
+                                                         memoryManagerOpt,
+                                                         cacheName,
+                                                         cacheStrategyOpt,
+                                                         cacheRatio)
   private val oapRpcDriverEndpoint = RpcUtils.makeDriverRef(
     OapRpcManagerMaster.DRIVER_ENDPOINT_NAME, sparkEnv.conf, sparkEnv.rpcEnv)
   override val oapRpcManager = new OapRpcManagerSlave(
@@ -137,20 +158,44 @@ object OapRuntime {
 
   def init(): OapRuntime = {
     val sparkEnv = SparkEnv.get
+    val conf = sparkEnv.conf
     if (sparkEnv == null) throw new OapException("Can't run OAP without SparkContext")
-    init(sparkEnv)
+
+    val memoryManagerOpt =
+      sparkEnv.conf.get(OapConf.OAP_FIBERCACHE_MEMORY_MANAGER.key, "offheap").toLowerCase
+
+    val cacheName =
+      sparkEnv.conf.get(OapConf.OAP_FIBERCACHE_STRATEGY.key, "guava").toLowerCase
+
+    val configEntry: ConfigEntry[String] = OapConf.OAP_FIBERCACHE_STRATEGY
+    val cacheStrategyOpt =
+      conf.get(
+        configEntry.key,
+        configEntry.defaultValue.get).toLowerCase
+
+    val cacheRatio = sparkEnv.conf.getDouble(
+      OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.key,
+      OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.defaultValue.get)
+
+    init(sparkEnv, memoryManagerOpt: String, cacheName: String,
+      cacheStrategyOpt: String, cacheRatio: scala.Double)
   }
 
   // init() is not called in SparkEnv because maybe user don't want to keep
   // OapRuntime always ready, since Oap can take a lot of memory. By manually call stop(),
   // user can delete every instance of OAP, use stock spark without restart cluster.
   // Now we rely on SparkEnv to call stop() for us.
-  def init(sparkEnv: SparkEnv): OapRuntime = synchronized {
+  def init(sparkEnv: SparkEnv,
+           memoryManagerOpt: String,
+           cacheName: String,
+           cacheStrategyOpt: String,
+           cacheRatio: scala.Double): OapRuntime = synchronized {
     if (rt == null) {
       rt = if (isDriver(sparkEnv.conf)) {
-        new OapDriverRuntime(sparkEnv)
+        new OapDriverRuntime(sparkEnv, memoryManagerOpt, cacheName, cacheStrategyOpt, cacheRatio)
       } else {
-        new OapExecutorRuntime(sparkEnv)
+        new OapExecutorRuntime(sparkEnv,
+          sparkEnv.conf, memoryManagerOpt, cacheName, cacheStrategyOpt, cacheRatio)
       }
     }
     rt
