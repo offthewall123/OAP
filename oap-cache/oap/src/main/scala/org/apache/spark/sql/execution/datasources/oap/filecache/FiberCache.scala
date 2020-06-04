@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 import com.google.common.primitives.Ints
+import com.intel.oap.common.sparkutils.UTF8String
 import com.intel.oap.common.sparkutils.unsafe.Platform
 import scala.collection.mutable
 
@@ -28,7 +29,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.vectorized.OnHeapColumnVector
 import org.apache.spark.sql.oap.OapRuntime
-import org.apache.spark.unsafe.types.UTF8String
 
 object FiberType extends Enumeration {
   type FiberType = Value

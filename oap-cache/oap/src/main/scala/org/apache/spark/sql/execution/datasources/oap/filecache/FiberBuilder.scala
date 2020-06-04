@@ -19,13 +19,13 @@ package org.apache.spark.sql.execution.datasources.oap.filecache
 
 import scala.collection.mutable.ArrayBuffer
 
+import com.intel.oap.common.sparkutils.UTF8String
 import com.intel.oap.common.sparkutils.unsafe.Platform
 import org.apache.parquet.format.Encoding
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.oap.io._
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.collection.OapBitSet
 
 /**
