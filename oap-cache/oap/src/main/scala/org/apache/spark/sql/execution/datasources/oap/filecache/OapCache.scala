@@ -815,115 +815,115 @@ class GuavaOapCache(
   }
 }
 
-class MixCache(dataCacheMemory: Long,
-               indexCacheMemory: Long,
-               dataCacheGuardianMemory: Long,
-               indexCacheGuardianMemory: Long,
-               separation: Boolean,
-               sparkEnv: SparkEnv)
-  extends OapCache with Logging {
-
-  private val (dataCacheBackend, indexCacheBackend) = init()
-
-  private def init(): (OapCache, OapCache) = {
-    if (!separation) {
-      val dataCacheBackend = OapCache(sparkEnv, OapConf.OAP_MIX_DATA_CACHE_BACKEND,
-        dataCacheMemory, dataCacheGuardianMemory, FiberType.DATA);
-      val indexCacheBackend = OapCache(sparkEnv, OapConf.OAP_MIX_INDEX_CACHE_BACKEND,
-        indexCacheMemory, indexCacheGuardianMemory, FiberType.INDEX);
-      (dataCacheBackend, indexCacheBackend)
-    } else {
-      val dataCacheBackend = new GuavaOapCache(dataCacheMemory, dataCacheGuardianMemory,
-        FiberType.DATA)
-      val indexCacheBackend = new GuavaOapCache(indexCacheMemory, indexCacheGuardianMemory,
-        FiberType.INDEX)
-      (dataCacheBackend, indexCacheBackend)
-    }
-  }
-
-  override def get(fiberId: FiberId): FiberCache = {
-    if (fiberId.isInstanceOf[DataFiberId] ||
-      fiberId.isInstanceOf[TestDataFiberId]) {
-      val fiberCache = dataCacheBackend.get(fiberId)
-      fiberCache
-    } else if (fiberId.isInstanceOf[BTreeFiberId] ||
-      fiberId.isInstanceOf[BitmapFiberId] ||
-      fiberId.isInstanceOf[TestIndexFiberId]) {
-      val fiberCache = indexCacheBackend.get(fiberId)
-      fiberCache
-    } else {
-      throw new OapException(s"not support fiber type $fiberId")
-    }
-  }
-
-  override def getIfPresent(fiber: FiberId): FiberCache =
-    if (fiber.isInstanceOf[BTreeFiberId] ||
-      fiber.isInstanceOf[BitmapFiberId] ||
-      fiber.isInstanceOf[TestIndexFiberId]) {
-      indexCacheBackend.getIfPresent(fiber)
-    } else {
-      dataCacheBackend.getIfPresent(fiber)
-    }
-
-  override def getFibers: Set[FiberId] = {
-    dataCacheBackend.getFibers ++ indexCacheBackend.getFibers
-  }
-
-  override def invalidate(fiber: FiberId): Unit =
-    if (fiber.isInstanceOf[BTreeFiberId] ||
-      fiber.isInstanceOf[BitmapFiberId] ||
-      fiber.isInstanceOf[TestIndexFiberId]) {
-      indexCacheBackend.invalidate(fiber)
-    } else {
-      dataCacheBackend.invalidate(fiber)
-    }
-
-  override def invalidateAll(fibers: Iterable[FiberId]): Unit = {
-    fibers.foreach(invalidate)
-  }
-
-  override def cacheSize: Long = {
-    dataCacheBackend.cacheSize + indexCacheBackend.cacheSize
-  }
-
-  override def cacheStats: CacheStats = {
-    dataCacheBackend.cacheStats + indexCacheBackend.cacheStats
-  }
-
-  override def cacheCount: Long = {
-    dataCacheBackend.cacheCount + indexCacheBackend.cacheCount
-  }
-
-  override def dataCacheCount: Long = {
-    dataCacheBackend.dataCacheCount + indexCacheBackend.dataCacheCount
-  }
-
-  override def pendingFiberCount: Int = {
-    dataCacheBackend.getCacheGuardian.pendingFiberCount +
-      indexCacheBackend.getCacheGuardian.pendingFiberCount
-  }
-
-  override def pendingFiberSize: Long = {
-    dataCacheBackend.getCacheGuardian.pendingFiberSize +
-      indexCacheBackend.getCacheGuardian.pendingFiberSize
-  }
-
-  override def pendingFiberOccupiedSize: Long = {
-    dataCacheBackend.getCacheGuardian.pendingFiberOccupiedSize +
-      indexCacheBackend.getCacheGuardian.pendingFiberOccupiedSize
-  }
-
-  override def getCacheGuardian: CacheGuardian = {
-    // this method is only used in VectorizedCacheReader
-    // So we get from dataCacheBackend
-    dataCacheBackend.getCacheGuardian
-  }
-
-  override def cleanUp: Unit = {
-    dataCacheBackend.cleanUp()
-    indexCacheBackend.cleanUp()
-  }
-}
+// class MixCache(dataCacheMemory: Long,
+//               indexCacheMemory: Long,
+//               dataCacheGuardianMemory: Long,
+//               indexCacheGuardianMemory: Long,
+//               separation: Boolean,
+//               sparkEnv: SparkEnv)
+//  extends OapCache with Logging {
+//
+//  private val (dataCacheBackend, indexCacheBackend) = init()
+//
+//  private def init(): (OapCache, OapCache) = {
+//    if (!separation) {
+//      val dataCacheBackend = OapCache(sparkEnv, OapConf.OAP_MIX_DATA_CACHE_BACKEND,
+//        dataCacheMemory, dataCacheGuardianMemory, FiberType.DATA);
+//      val indexCacheBackend = OapCache(sparkEnv, OapConf.OAP_MIX_INDEX_CACHE_BACKEND,
+//        indexCacheMemory, indexCacheGuardianMemory, FiberType.INDEX);
+//      (dataCacheBackend, indexCacheBackend)
+//    } else {
+//      val dataCacheBackend = new GuavaOapCache(dataCacheMemory, dataCacheGuardianMemory,
+//        FiberType.DATA)
+//      val indexCacheBackend = new GuavaOapCache(indexCacheMemory, indexCacheGuardianMemory,
+//        FiberType.INDEX)
+//      (dataCacheBackend, indexCacheBackend)
+//    }
+//  }
+//
+//  override def get(fiberId: FiberId): FiberCache = {
+//    if (fiberId.isInstanceOf[DataFiberId] ||
+//      fiberId.isInstanceOf[TestDataFiberId]) {
+//      val fiberCache = dataCacheBackend.get(fiberId)
+//      fiberCache
+//    } else if (fiberId.isInstanceOf[BTreeFiberId] ||
+//      fiberId.isInstanceOf[BitmapFiberId] ||
+//      fiberId.isInstanceOf[TestIndexFiberId]) {
+//      val fiberCache = indexCacheBackend.get(fiberId)
+//      fiberCache
+//    } else {
+//      throw new OapException(s"not support fiber type $fiberId")
+//    }
+//  }
+//
+//  override def getIfPresent(fiber: FiberId): FiberCache =
+//    if (fiber.isInstanceOf[BTreeFiberId] ||
+//      fiber.isInstanceOf[BitmapFiberId] ||
+//      fiber.isInstanceOf[TestIndexFiberId]) {
+//      indexCacheBackend.getIfPresent(fiber)
+//    } else {
+//      dataCacheBackend.getIfPresent(fiber)
+//    }
+//
+//  override def getFibers: Set[FiberId] = {
+//    dataCacheBackend.getFibers ++ indexCacheBackend.getFibers
+//  }
+//
+//  override def invalidate(fiber: FiberId): Unit =
+//    if (fiber.isInstanceOf[BTreeFiberId] ||
+//      fiber.isInstanceOf[BitmapFiberId] ||
+//      fiber.isInstanceOf[TestIndexFiberId]) {
+//      indexCacheBackend.invalidate(fiber)
+//    } else {
+//      dataCacheBackend.invalidate(fiber)
+//    }
+//
+//  override def invalidateAll(fibers: Iterable[FiberId]): Unit = {
+//    fibers.foreach(invalidate)
+//  }
+//
+//  override def cacheSize: Long = {
+//    dataCacheBackend.cacheSize + indexCacheBackend.cacheSize
+//  }
+//
+//  override def cacheStats: CacheStats = {
+//    dataCacheBackend.cacheStats + indexCacheBackend.cacheStats
+//  }
+//
+//  override def cacheCount: Long = {
+//    dataCacheBackend.cacheCount + indexCacheBackend.cacheCount
+//  }
+//
+//  override def dataCacheCount: Long = {
+//    dataCacheBackend.dataCacheCount + indexCacheBackend.dataCacheCount
+//  }
+//
+//  override def pendingFiberCount: Int = {
+//    dataCacheBackend.getCacheGuardian.pendingFiberCount +
+//      indexCacheBackend.getCacheGuardian.pendingFiberCount
+//  }
+//
+//  override def pendingFiberSize: Long = {
+//    dataCacheBackend.getCacheGuardian.pendingFiberSize +
+//      indexCacheBackend.getCacheGuardian.pendingFiberSize
+//  }
+//
+//  override def pendingFiberOccupiedSize: Long = {
+//    dataCacheBackend.getCacheGuardian.pendingFiberOccupiedSize +
+//      indexCacheBackend.getCacheGuardian.pendingFiberOccupiedSize
+//  }
+//
+//  override def getCacheGuardian: CacheGuardian = {
+//    // this method is only used in VectorizedCacheReader
+//    // So we get from dataCacheBackend
+//    dataCacheBackend.getCacheGuardian
+//  }
+//
+//  override def cleanUp: Unit = {
+//    dataCacheBackend.cleanUp()
+//    indexCacheBackend.cleanUp()
+//  }
+// }
 
 class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private val conf = SparkEnv.get.conf

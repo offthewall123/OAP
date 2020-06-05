@@ -85,14 +85,16 @@ private[sql] class FiberCacheManager(
       new VMemCache(FiberType.DATA)
     } else if (cacheName.equals(EXTERNAL_CACHE)) {
       new ExternalCache(FiberType.DATA)
-    } else if (cacheName.equals(MIX_CACHE)) {
-      val separateCache = sparkEnv.conf.getBoolean(
-        OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.key,
-        OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.defaultValue.get
-      )
-      new MixCache(dataCacheMemorySize, indexCacheMemorySize, dataCacheGuardianMemorySize,
-        indexCacheGuardianMemorySize, separateCache, sparkEnv)
-    } else {
+    }
+//    else if (cacheName.equals(MIX_CACHE)) {
+//      val separateCache = sparkEnv.conf.getBoolean(
+//        OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.key,
+//        OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.defaultValue.get
+//      )
+//      new MixCache(dataCacheMemorySize, indexCacheMemorySize, dataCacheGuardianMemorySize,
+//        indexCacheGuardianMemorySize, separateCache, sparkEnv)
+//    }
+    else {
       throw new OapException(s"Unsupported cache strategy $cacheName")
     }
   }
