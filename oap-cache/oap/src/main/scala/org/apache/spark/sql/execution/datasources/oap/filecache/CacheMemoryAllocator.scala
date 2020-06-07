@@ -48,11 +48,11 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
 //    }
 //  }
   private def calculateSizes(): (Long, Long) = {
-    val cacheRatio = sparkEnv.conf.getDouble(
-      OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.key,
-      OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.defaultValue.get)
-    require(cacheRatio >= 0 && cacheRatio <= 1,
-      "Data and index cache ratio should be between 0 and 1")
+//    val cacheRatio = sparkEnv.conf.getDouble(
+//      OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.key,
+//      OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.defaultValue.get)
+//    require(cacheRatio >= 0 && cacheRatio <= 1,
+//      "Data and index cache ratio should be between 0 and 1")
 
     val memorySize = memoryManager.memorySize
     ((memorySize * 0.9).toLong, (memorySize * 0.1).toLong)
