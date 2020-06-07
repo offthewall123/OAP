@@ -250,12 +250,12 @@ private[filecache] object OapCache extends Logging {
   }
 
   def apply(sparkEnv: SparkEnv, cacheMemory: Long,
-            cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
-    apply(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, cacheMemory, cacheGuardianMemory, fiberType)
+            cacheGuardianMemory: Long): OapCache = {
+    apply(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, cacheMemory, cacheGuardianMemory)
   }
 
   def apply(sparkEnv: SparkEnv, configEntry: ConfigEntry[String],
-            cacheMemory: Long, cacheGuardianMemory: Long, fiberType: FiberType): OapCache = {
+            cacheMemory: Long, cacheGuardianMemory: Long): OapCache = {
     val conf = sparkEnv.conf
     val oapCacheOpt = conf.get(
       configEntry.key,
@@ -269,7 +269,7 @@ private[filecache] object OapCache extends Logging {
     if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
       if (!cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean)) {
         if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
-          return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+          return new GuavaOapCache(cacheMemory, cacheGuardianMemory)
         }
         logWarning(s"There is no Optane PMem DIMMs detected," +
           s"has to fall back to simple cache implementation")
@@ -277,10 +277,10 @@ private[filecache] object OapCache extends Logging {
       }
       else {
         oapCacheOpt match {
-          case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
-          case "vmem" => new VMemCache(fiberType)
-          case "noevict" => new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
-          case "external" => new ExternalCache(fiberType)
+          case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory)
+          case "vmem" => new VMemCache()
+          case "noevict" => new NoEvictPMCache(cacheMemory, cacheGuardianMemory)
+          case "external" => new ExternalCache()
           case _ => throw new UnsupportedOperationException(
             s"The cache backend: ${oapCacheOpt} is not supported now")
         }
@@ -356,8 +356,8 @@ trait OapCache {
 }
 
 class NoEvictPMCache(pmSize: Long,
-                      cacheGuardianMemory: Long,
-                      fiberType: FiberType) extends OapCache with Logging {
+                      cacheGuardianMemory: Long
+                      ) extends OapCache with Logging {
   // We don't bother the memory use of Simple Cache
   private val cacheGuardian = new MultiThreadCacheGuardian(Int.MaxValue)
   private val _cacheSize: AtomicLong = new AtomicLong(0)
@@ -475,7 +475,7 @@ class SimpleOapCache extends OapCache with Logging {
   override def getCacheGuardian: CacheGuardian = cacheGuardian
 }
 
-class VMemCache(fiberType: FiberType) extends OapCache with Logging {
+class VMemCache() extends OapCache with Logging {
   private def emptyDataFiber(fiberLength: Long): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 
@@ -666,8 +666,7 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
 
 class GuavaOapCache(
     cacheMemory: Long,
-    cacheGuardianMemory: Long,
-    fiberType: FiberType)
+    cacheGuardianMemory: Long)
     extends OapCache with Logging {
 
   // TODO: CacheGuardian can also track cache statistics periodically
@@ -925,7 +924,7 @@ class GuavaOapCache(
 //  }
 // }
 
-class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
+class ExternalCache() extends OapCache with Logging {
   private val conf = SparkEnv.get.conf
   private val externalStoreCacheSocket: String = "/tmp/plasmaStore"
   private var cacheInit: Boolean = false

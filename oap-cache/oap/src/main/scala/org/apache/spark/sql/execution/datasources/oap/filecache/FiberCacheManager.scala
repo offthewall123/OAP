@@ -76,15 +76,15 @@ private[sql] class FiberCacheManager(
 
     val cacheName = sparkEnv.conf.get("spark.oap.cache.strategy", DEFAULT_CACHE_STRATEGY)
     if (cacheName.equals(GUAVA_CACHE)) {
-      new GuavaOapCache(dataCacheMemorySize, dataCacheGuardianMemorySize, FiberType.DATA)
+      new GuavaOapCache(dataCacheMemorySize, dataCacheGuardianMemorySize)
     } else if (cacheName.equals(SIMPLE_CACHE)) {
       new SimpleOapCache()
     } else if (cacheName.equals(NO_EVICT_CACHE)) {
-      new NoEvictPMCache(dataCacheMemorySize, dataCacheGuardianMemorySize, FiberType.DATA)
+      new NoEvictPMCache(dataCacheMemorySize, dataCacheGuardianMemorySize)
     } else if (cacheName.equals(VMEM_CACHE)) {
-      new VMemCache(FiberType.DATA)
+      new VMemCache()
     } else if (cacheName.equals(EXTERNAL_CACHE)) {
-      new ExternalCache(FiberType.DATA)
+      new ExternalCache()
     }
 //    else if (cacheName.equals(MIX_CACHE)) {
 //      val separateCache = sparkEnv.conf.getBoolean(
