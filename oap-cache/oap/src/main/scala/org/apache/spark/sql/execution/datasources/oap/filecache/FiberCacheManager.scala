@@ -58,21 +58,21 @@ private[sql] class FiberCacheManager(
   private val fiberLockManager = new FiberLockManager()
 
   var dataCacheMemorySize: Long = cacheAllocator.dataCacheMemorySize
-  var indexCacheMemorySize: Long = cacheAllocator.indexCacheMemorySize
+//  var indexCacheMemorySize: Long = cacheAllocator.indexCacheMemorySize
   def dataCacheGuardianMemorySize: Long = cacheAllocator.dataCacheGuardianMemorySize
-  def indexCacheGuardianMemorySize: Long = cacheAllocator.indexCacheGuardianMemorySize
+//  def indexCacheGuardianMemorySize: Long = cacheAllocator.indexCacheGuardianMemorySize
 
   def dataCacheCompressEnable: Boolean = _dataCacheCompressEnable
   def dataCacheCompressionCodec: String = _dataCacheCompressionCodec
   def dataCacheCompressionSize: Int = _dataCacheCompressionSize
 
   def dcpmmWaitingThreshold: Long = _dcpmmWaitingThreshold
-  def inMixMode: Boolean = cacheAllocator.separateMemory
+//  def inMixMode: Boolean = cacheAllocator.separateMemory
 
   private val cacheBackend: OapCache = {
-    if (!inMixMode) {
-      dataCacheMemorySize = dataCacheMemorySize + indexCacheMemorySize
-    }
+//    if (!inMixMode) {
+//      dataCacheMemorySize = dataCacheMemorySize + indexCacheMemorySize
+//    }
 
     val cacheName = sparkEnv.conf.get("spark.oap.cache.strategy", DEFAULT_CACHE_STRATEGY)
     if (cacheName.equals(GUAVA_CACHE)) {
