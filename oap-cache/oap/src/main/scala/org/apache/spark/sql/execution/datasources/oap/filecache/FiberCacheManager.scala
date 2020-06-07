@@ -41,7 +41,7 @@ private[sql] class FiberCacheManager(
   private val SIMPLE_CACHE = "simple"
   private val NO_EVICT_CACHE = "noevict"
   private val VMEM_CACHE = "vmem"
-  private val MIX_CACHE = "mix"
+//  private val MIX_CACHE = "mix"
   private val EXTERNAL_CACHE = "external"
   private val DEFAULT_CACHE_STRATEGY = GUAVA_CACHE
 
@@ -139,7 +139,7 @@ private[sql] class FiberCacheManager(
     length: Long): MemoryBlockHolder = {
     fiberType match {
       case FiberType.DATA => cacheAllocator.allocateDataMemory(length)
-      case FiberType.INDEX => cacheAllocator.allocateIndexMemory(length)
+//      case FiberType.INDEX => cacheAllocator.allocateIndexMemory(length)
       case _ => throw new UnsupportedOperationException("Unsupported fiber type")
     }
   }
@@ -147,7 +147,7 @@ private[sql] class FiberCacheManager(
   private[filecache] def freeFiberMemory(fiberCache: FiberCache): Unit = {
     fiberCache.fiberType match {
       case FiberType.DATA => cacheAllocator.freeDataMemory(fiberCache.fiberData)
-      case FiberType.INDEX => cacheAllocator.freeIndexMemory(fiberCache.fiberData)
+//      case FiberType.INDEX => cacheAllocator.freeIndexMemory(fiberCache.fiberData)
       case _ => throw new UnsupportedOperationException("Unsupported fiber type")
     }
   }

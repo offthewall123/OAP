@@ -222,17 +222,3 @@ private[oap] case class TestDataFiberId(getData: () => FiberCache, name: String)
     s"type: TestDataFiber name: $name"
   }
 }
-
-private[oap] case class TestIndexFiberId(getData: () => FiberCache, name: String) extends FiberId {
-
-  override def hashCode(): Int = name.hashCode()
-
-  override def equals(obj: Any): Boolean = obj match {
-    case another: TestIndexFiberId => name.equals(another.name)
-    case _ => false
-  }
-
-  override def toString: String = {
-    s"type: TestIndexFiber name: $name"
-  }
-}
