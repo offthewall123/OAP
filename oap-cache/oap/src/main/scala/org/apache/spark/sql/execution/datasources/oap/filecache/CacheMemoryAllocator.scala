@@ -29,8 +29,7 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
   extends Logging {
 //  private val _separateMemory = checkSeparateMemory()
   private val (memoryManager, indexMemoryManager) = init()
-  private val (_dataCacheMemorySize, _indexCacheMemorySize,
-              _dataCacheGuardianMemorySize, _indexCacheGuardianMemorySize) = calculateSizes()
+  private val (_dataCacheMemorySize, _dataCacheGuardianMemorySize) = calculateSizes()
 
 //  private def checkSeparateMemory(): Boolean = {
 //    val memoryManagerOpt =
@@ -48,7 +47,7 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
 //      case _ => false
 //    }
 //  }
-  private def calculateSizes(): (Long, Long, Long, Long) = {
+  private def calculateSizes(): (Long, Long) = {
     val cacheRatio = sparkEnv.conf.getDouble(
       OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.key,
       OapConf.OAP_DATAFIBER_USE_FIBERCACHE_RATIO.defaultValue.get)
@@ -56,9 +55,8 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
       "Data and index cache ratio should be between 0 and 1")
 
     val memorySize = memoryManager.memorySize
-    ((memorySize * 0.9 * cacheRatio).toLong,
-      (memorySize * 0.9 * (1 - cacheRatio)).toLong,
-      (memorySize * 0.1).toLong, 0)
+    ((memorySize * 0.9).toLong, (memorySize * 0.1).toLong)
+
     // TO DO: make the 0.9 : 0.1 ration configurable
 //    if (_separateMemory) {
 //      ((memoryManager.memorySize * 0.9).toLong, (indexMemoryManager.memorySize * 0.9).toLong,
@@ -132,9 +130,9 @@ private[filecache] class CacheMemoryAllocator(sparkEnv: SparkEnv)
   }
 
   def dataCacheMemorySize: Long = _dataCacheMemorySize
-  def indexCacheMemorySize: Long = _indexCacheMemorySize
+//  def indexCacheMemorySize: Long = _indexCacheMemorySize
   def dataCacheGuardianMemorySize: Long = _dataCacheGuardianMemorySize
-  def indexCacheGuardianMemorySize: Long = _indexCacheGuardianMemorySize
+//  def indexCacheGuardianMemorySize: Long = _indexCacheGuardianMemorySize
 //  def separateMemory: Boolean = _separateMemory
 }
 
