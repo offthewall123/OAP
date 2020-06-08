@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.execution.datasources.oap.{Key, RangeInterval}
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
-import org.apache.spark.sql.execution.datasources.oap.index._
 import org.apache.spark.sql.execution.datasources.oap.utils.OutputStreamUtil
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.types._
@@ -56,21 +55,22 @@ class StatisticsWriteManager {
   def isExternalSorterEnable: Boolean = _isExternalSorterEnable
   // When a task initialize statisticsWriteManager, we read all config from `conf`,
   // which is created from `SparkUtils`, hence containing all spark config values.
-  def initialize(indexType: OapIndexType, s: StructType, conf: Configuration): Unit = {
-    _isExternalSorterEnable = conf.getBoolean(OapConf.OAP_INDEX_STATISTIC_EXTERNALSORTER_ENABLE.key,
-      OapConf.OAP_INDEX_STATISTIC_EXTERNALSORTER_ENABLE.defaultValue.get
-    ) && indexType.toString.equals(BTreeIndexType.toString)
-
-    val statsTypes = StatisticsManager.statisticsTypeMap(indexType).filter { statType =>
-      val typeFromConfig = conf.get(OapConf.OAP_STATISTICS_TYPES.key,
-        OapConf.OAP_STATISTICS_TYPES.defaultValueString).split(",").map(_.trim)
-      typeFromConfig.contains(statType)
-    }
+  def initialize(s: StructType, conf: Configuration): Unit = {
+//    _isExternalSorterEnable = conf.getBoolean(
+    //    OapConf.OAP_INDEX_STATISTIC_EXTERNALSORTER_ENABLE.key,
+//      OapConf.OAP_INDEX_STATISTIC_EXTERNALSORTER_ENABLE.defaultValue.get
+//    ) && indexType.toString.equals(BTreeIndexType.toString)
+//
+//    val statsTypes = StatisticsManager.statisticsTypeMap(indexType).filter { statType =>
+//      val typeFromConfig = conf.get(OapConf.OAP_STATISTICS_TYPES.key,
+//        OapConf.OAP_STATISTICS_TYPES.defaultValueString).split(",").map(_.trim)
+//      typeFromConfig.contains(statType)
+//    }
     schema = s
-    stats = statsTypes.map {
-      case StatisticsType(st) => st(s, conf)
-      case t => throw new UnsupportedOperationException(s"non-supported statistic type $t")
-    }
+//    stats = statsTypes.map {
+//      case StatisticsType(st) => st(s, conf)
+//      case t => throw new UnsupportedOperationException(s"non-supported statistic type $t")
+//    }
     content = new ArrayBuffer[Key]()
   }
 
@@ -131,10 +131,10 @@ class StatisticsWriteManager {
 object StatisticsManager {
   val STATISTICSMASK: Long = 0x20170524abcdefabL // a random mask for statistics begin
 
-  val statisticsTypeMap: scala.collection.mutable.Map[OapIndexType, Array[String]] =
-    scala.collection.mutable.Map(
-      BTreeIndexType -> Array("MINMAX", "SAMPLE", "BLOOM", "PARTBYVALUE"),
-      BitMapIndexType -> Array.empty)
+//  val statisticsTypeMap: scala.collection.mutable.Map[OapIndexType, Array[String]] =
+//    scala.collection.mutable.Map(
+//      BTreeIndexType -> Array("MINMAX", "SAMPLE", "BLOOM", "PARTBYVALUE"),
+//      BitMapIndexType -> Array.empty)
 
   def read(fiberCache: FiberCache, offset: Int, s: StructType): Array[StatisticsReader] = {
     var readOffset = 0
