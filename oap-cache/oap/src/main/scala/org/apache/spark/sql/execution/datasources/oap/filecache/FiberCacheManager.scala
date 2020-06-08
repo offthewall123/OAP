@@ -172,16 +172,16 @@ private[sql] class FiberCacheManager(
     FiberCache(FiberType.DATA, allocateFiberMemory(FiberType.DATA, length))
   }
 
-  def releaseIndexCache(indexName: String): Unit = {
-    logDebug(s"Going to remove all index cache of $indexName")
-    val fiberToBeRemoved = cacheBackend.getFibers.filter {
-      case BTreeFiberId(_, file, _, _) => file.contains(indexName)
-      case BitmapFiberId(_, file, _, _) => file.contains(indexName)
-      case _ => false
-    }
-    cacheBackend.invalidateAll(fiberToBeRemoved)
-    logDebug(s"Removed ${fiberToBeRemoved.size} fibers.")
-  }
+//  def releaseIndexCache(indexName: String): Unit = {
+//    logDebug(s"Going to remove all index cache of $indexName")
+//    val fiberToBeRemoved = cacheBackend.getFibers.filter {
+//      case BTreeFiberId(_, file, _, _) => file.contains(indexName)
+//      case BitmapFiberId(_, file, _, _) => file.contains(indexName)
+//      case _ => false
+//    }
+//    cacheBackend.invalidateAll(fiberToBeRemoved)
+//    logDebug(s"Removed ${fiberToBeRemoved.size} fibers.")
+//  }
 
   def getCacheGuardian(): CacheGuardian = {
     cacheBackend.getCacheGuardian
