@@ -58,22 +58,15 @@ private[sql] class FiberCacheManager(
   private val fiberLockManager = new FiberLockManager()
 
   var dataCacheMemorySize: Long = cacheAllocator.dataCacheMemorySize
-//  var indexCacheMemorySize: Long = cacheAllocator.indexCacheMemorySize
   def dataCacheGuardianMemorySize: Long = cacheAllocator.dataCacheGuardianMemorySize
-//  def indexCacheGuardianMemorySize: Long = cacheAllocator.indexCacheGuardianMemorySize
 
   def dataCacheCompressEnable: Boolean = _dataCacheCompressEnable
   def dataCacheCompressionCodec: String = _dataCacheCompressionCodec
   def dataCacheCompressionSize: Int = _dataCacheCompressionSize
 
   def dcpmmWaitingThreshold: Long = _dcpmmWaitingThreshold
-//  def inMixMode: Boolean = cacheAllocator.separateMemory
 
   private val cacheBackend: OapCache = {
-//    if (!inMixMode) {
-//      dataCacheMemorySize = dataCacheMemorySize + indexCacheMemorySize
-//    }
-
     val cacheName = sparkEnv.conf.get("spark.oap.cache.strategy", DEFAULT_CACHE_STRATEGY)
     if (cacheName.equals(GUAVA_CACHE)) {
       new GuavaOapCache(dataCacheMemorySize, dataCacheGuardianMemorySize)
@@ -86,14 +79,6 @@ private[sql] class FiberCacheManager(
     } else if (cacheName.equals(EXTERNAL_CACHE)) {
       new ExternalCache()
     }
-//    else if (cacheName.equals(MIX_CACHE)) {
-//      val separateCache = sparkEnv.conf.getBoolean(
-//        OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.key,
-//        OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.defaultValue.get
-//      )
-//      new MixCache(dataCacheMemorySize, indexCacheMemorySize, dataCacheGuardianMemorySize,
-//        indexCacheGuardianMemorySize, separateCache, sparkEnv)
-//    }
     else {
       throw new OapException(s"Unsupported cache strategy $cacheName")
     }
@@ -139,7 +124,6 @@ private[sql] class FiberCacheManager(
     length: Long): MemoryBlockHolder = {
     fiberType match {
       case FiberType.DATA => cacheAllocator.allocateDataMemory(length)
-//      case FiberType.INDEX => cacheAllocator.allocateIndexMemory(length)
       case _ => throw new UnsupportedOperationException("Unsupported fiber type")
     }
   }
@@ -147,7 +131,6 @@ private[sql] class FiberCacheManager(
   private[filecache] def freeFiberMemory(fiberCache: FiberCache): Unit = {
     fiberCache.fiberType match {
       case FiberType.DATA => cacheAllocator.freeDataMemory(fiberCache.fiberData)
-//      case FiberType.INDEX => cacheAllocator.freeIndexMemory(fiberCache.fiberData)
       case _ => throw new UnsupportedOperationException("Unsupported fiber type")
     }
   }
@@ -177,22 +160,6 @@ private[sql] class FiberCacheManager(
       fiberCache
     }
   }
-
-  /**
-   * Used by IndexFile
-   */
-//  def toIndexFiberCache(in: FSDataInputStream, position: Long, length: Int): FiberCache = {
-//    val bytes = new Array[Byte](length)
-//    in.readFully(position, bytes)
-//    toFiberCache(FiberType.INDEX, bytes)
-//  }
-
-//  /**
-//   * Used by IndexFile. For decompressed data
-//   */
-//  def toIndexFiberCache(bytes: Array[Byte]): FiberCache = {
-//    toFiberCache(FiberType.INDEX, bytes)
-//  }
 
   /**
    * Used by OapDataFile since we need to parse the raw data in on-heap memory before put it into

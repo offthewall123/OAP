@@ -150,30 +150,6 @@ private[sql] object MemoryManager extends Logging {
       case "noevict" => new HybridMemoryManager(sparkEnv)
       case "vmem" => new TmpDramMemoryManager(sparkEnv)
       case "external" => new TmpDramMemoryManager(sparkEnv)
-//      case "mix" =>
-//        if (!memoryManagerOpt.equals("mix")) {
-//          apply(sparkEnv, memoryManagerOpt)
-//        } else {
-//          var cacheBackendOpt = ""
-//          var mixMemoryMangerOpt = ""
-//          fiberType match {
-//            case FiberType.DATA =>
-//              cacheBackendOpt =
-//                conf.get(OapConf.OAP_MIX_DATA_CACHE_BACKEND.key, "guava").toLowerCase
-//              mixMemoryMangerOpt =
-//                conf.get(OapConf.OAP_MIX_DATA_MEMORY_MANAGER.key, "pm").toLowerCase
-//            case FiberType.INDEX =>
-//              cacheBackendOpt =
-//                conf.get(OapConf.OAP_MIX_INDEX_CACHE_BACKEND.key, "guava").toLowerCase
-//              mixMemoryMangerOpt =
-//                conf.get(OapConf.OAP_MIX_INDEX_MEMORY_MANAGER.key, "offheap").toLowerCase
-//          }
-//          checkConfCompatibility(cacheBackendOpt, mixMemoryMangerOpt)
-//          cacheBackendOpt match {
-//            case "vmem" => new TmpDramMemoryManager(sparkEnv)
-//            case _ => apply(sparkEnv, mixMemoryMangerOpt)
-//          }
-//        }
       case _ => throw new UnsupportedOperationException(
         s"The cache strategy: ${cacheStrategyOpt} is not supported now")
     }
