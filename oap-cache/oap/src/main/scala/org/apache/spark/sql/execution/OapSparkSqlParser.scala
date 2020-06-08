@@ -120,39 +120,6 @@ class OapSqlBaseAstBuilder(conf: SQLConf) extends OapSqlBaseBaseVisitor[AnyRef] 
 
   override def visitPassThrough(ctx: PassThroughContext): LogicalPlan = null
 
-//  /**
-//   * Create an index. Create a [[CreateIndexCommand]] command.
-//   *
-//   * {{{
-//   *   CREATE OINDEX [IF NOT EXISTS] indexName ON tableName (col1 [ASC | DESC], col2, ...)
-//   *   [USING (BTREE | BITMAP)] [PARTITION (partcol1=val1, partcol2=val2 ...)]
-//   * }}}
-//   */
-//  override def visitOapCreateIndex(ctx: OapCreateIndexContext): LogicalPlan =
-//    withOrigin(ctx) {
-//      CreateIndexCommand(
-//        ctx.IDENTIFIER.getText,
-//        visitTableIdentifier(ctx.tableIdentifier()),
-//        visitIndexCols(ctx.indexCols),
-//        ctx.EXISTS != null, visitIndexType(ctx.indexType),
-//        Option(ctx.partitionSpec).map(visitNonOptionalPartitionSpec))
-//    }
-
-//  /**
-//   * Drop an index. Create a [[DropIndexCommand]] command.
-//   *
-//   * {{{
-//   *   DROP OINDEX [IF EXISTS] indexName on tableName [PARTITION (partcol1=val1, partcol2=val2 ...)]
-//   * }}}
-//   */
-//  override def visitOapDropIndex(ctx: OapDropIndexContext): LogicalPlan = withOrigin(ctx) {
-//    DropIndexCommand(
-//      ctx.IDENTIFIER.getText,
-//      visitTableIdentifier(ctx.tableIdentifier),
-//      ctx.EXISTS != null,
-//      Option(ctx.partitionSpec).map(visitNonOptionalPartitionSpec))
-//  }
-
   override def visitIndexCols(ctx: IndexColsContext): Array[IndexColumn] = withOrigin(ctx) {
     ctx.indexCol.toArray(new Array[IndexColContext](ctx.indexCol.size)).map(visitIndexCol)
   }
@@ -172,33 +139,6 @@ class OapSqlBaseAstBuilder(conf: SQLConf) extends OapSqlBaseBaseVisitor[AnyRef] 
       }
     }
   }
-
-//  override def visitOapRefreshIndices(ctx: OapRefreshIndicesContext): LogicalPlan =
-//    withOrigin(ctx) {
-//      RefreshIndexCommand(
-//        visitTableIdentifier(ctx.tableIdentifier),
-//        Option(ctx.partitionSpec).map(visitNonOptionalPartitionSpec))
-//    }
-//
-//  override def visitOapShowIndex(ctx: OapShowIndexContext): LogicalPlan = withOrigin(ctx) {
-//    val tableName = visitTableIdentifier(ctx.tableIdentifier)
-//    OapShowIndexCommand(tableName, tableName.identifier)
-//  }
-//
-//  override def visitOapCheckIndex(ctx: OapCheckIndexContext): LogicalPlan =
-//    withOrigin(ctx) {
-//      val tableIdentifier = visitTableIdentifier(ctx.tableIdentifier)
-//      OapCheckIndexCommand(
-//        tableIdentifier,
-//        tableIdentifier.identifier,
-//        Option(ctx.partitionSpec).map(visitNonOptionalPartitionSpec))
-//    }
-//
-//  override def visitOapDisableIndex(ctx: OapDisableIndexContext): LogicalPlan =
-//    OapDisableIndexCommand(ctx.IDENTIFIER.getText)
-//
-//  override def visitOapEnableIndex(ctx: OapEnableIndexContext): LogicalPlan =
-//    OapEnableIndexCommand(ctx.IDENTIFIER.getText)
 
   override def visitTableIdentifier(ctx: TableIdentifierContext): TableIdentifier = withOrigin(ctx) {
     TableIdentifier(ctx.table.getText, Option(ctx.db).map(_.getText))
