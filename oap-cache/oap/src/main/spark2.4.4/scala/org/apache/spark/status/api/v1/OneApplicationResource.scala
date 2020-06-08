@@ -105,8 +105,6 @@ private[v1] class AbstractApplicationResource extends BaseAppResource {
           cacheStats.backendCacheCount,
           cacheStats.dataFiberSize,
           cacheStats.dataFiberCount,
-//          cacheStats.indexFiberSize,
-//          cacheStats.indexFiberCount,
           cacheStats.pendingFiberSize,
           cacheStats.pendingFiberCount,
           cacheStats.dataFiberHitCount,
@@ -114,11 +112,6 @@ private[v1] class AbstractApplicationResource extends BaseAppResource {
           cacheStats.dataFiberLoadCount,
           cacheStats.dataTotalLoadTime,
           cacheStats.dataEvictionCount
-//          cacheStats.indexFiberHitCount,
-//          cacheStats.indexFiberMissCount,
-//          cacheStats.indexFiberLoadCount,
-//          cacheStats.indexTotalLoadTime,
-//          cacheStats.indexEvictionCount
         )
       }
     )
