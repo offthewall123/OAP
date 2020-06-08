@@ -172,7 +172,6 @@ private[oap] class OapDataReaderV1(
     meta: DataSourceMeta,
     partitionSchema: StructType,
     requiredSchema: StructType,
-    filterScanners: Option[IndexScanners],
     requiredIds: Array[Int],
     pushed: Option[FilterPredicate],
     metrics: OapMetricsManager,
@@ -235,8 +234,8 @@ private[oap] class OapDataReaderV1(
       logDebug("Construct File Iterator: " + (end - start) + " ms")
       iter
     }
-
-    filterScanners match {
+    fullScan
+//    filterScanners match {
 //      case Some(indexScanners) if indexScanners.isIndexFileBeneficial(path, conf) =>
 //        def getRowIds(options: Map[String, String]): Array[Int] = {
 //          indexScanners.initialize(path, conf)
@@ -282,12 +281,13 @@ private[oap] class OapDataReaderV1(
 //        _rowsReadWhenHitIndex = Some(rows.length)
 //        logDebug("Construct File Iterator: " + (end - start) + "ms")
 //        iter
-      case Some(_) =>
-        _indexStat = IGNORE_INDEX
-        fullScan
-      case _ =>
-        fullScan
-    }
+//      case Some(_) =>
+//        _indexStat = IGNORE_INDEX
+//        fullScan
+//      case _ =>
+//        fullScan
+//    }
+
   }
 
   override def read(file: PartitionedFile): Iterator[InternalRow] =

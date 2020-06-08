@@ -61,8 +61,8 @@ private[sql] class OptimizedParquetFileFormat extends OapFileFormat {
       hadoopConf: Configuration): PartitionedFile => Iterator[InternalRow] = {
     // TODO we need to pass the extra data source meta information via the func parameter
     val (filterScanners, m) = meta match {
-      case Some(x) if sparkSession.conf.get(OapConf.OAP_PARQUET_INDEX_ENABLED) =>
-        (indexScanners(x, filters), x)
+//      case Some(x) if sparkSession.conf.get(OapConf.OAP_PARQUET_INDEX_ENABLED) =>
+//        (indexScanners(x, filters), x)
       case _ =>
         // TODO Now we need use a meta with PARQUET_DATA_FILE_CLASSNAME & dataSchema to init
         // ParquetDataFile, try to remove this condition.
@@ -74,10 +74,10 @@ private[sql] class OptimizedParquetFileFormat extends OapFileFormat {
 
     // TODO Not very easy to use, refactor this.
     hitIndexColumns = filterScanners match {
-      case Some(s) =>
-        s.scanners.flatMap { scanner =>
-          scanner.keyNames.map(n => n -> scanner.meta.indexType)
-        }.toMap
+//      case Some(s) =>
+//        s.scanners.flatMap { scanner =>
+//          scanner.keyNames.map(n => n -> scanner.meta.indexType)
+//        }.toMap
       case _ => Map.empty
     }
 
@@ -119,7 +119,7 @@ private[sql] class OptimizedParquetFileFormat extends OapFileFormat {
         None
       }
       val reader = new OapDataReaderV1(file.filePath, m, partitionSchema, requiredSchema,
-        filterScanners, requiredIds, pushed, oapMetrics, conf, enableVectorizedReader, options,
+        requiredIds, pushed, oapMetrics, conf, enableVectorizedReader, options,
         filters, context)
       reader.read(file)
     }

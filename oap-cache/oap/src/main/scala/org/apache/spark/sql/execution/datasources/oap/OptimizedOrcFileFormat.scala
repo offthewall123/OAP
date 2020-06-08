@@ -65,8 +65,8 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
      hadoopConf: Configuration): PartitionedFile => Iterator[InternalRow] = {
     // TODO we need to pass the extra data source meta information via the func parameter
     val (filterScanners, m) = meta match {
-      case Some(x) =>
-        (indexScanners(x, filters), x)
+//      case Some(x) =>
+//        (indexScanners(x, filters), x)
       case _ =>
         // TODO Now we need use a meta with ORC_DATA_FILE_CLASSNAME & dataSchema to init
         // OrcDataFile, try to remove this condition.
@@ -77,10 +77,10 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
     }
     // TODO refactor this.
     hitIndexColumns = filterScanners match {
-      case Some(s) =>
-        s.scanners.flatMap { scanner =>
-          scanner.keyNames.map(n => n -> scanner.meta.indexType)
-        }.toMap
+//      case Some(s) =>
+//        s.scanners.flatMap { scanner =>
+//          scanner.keyNames.map(n => n -> scanner.meta.indexType)
+//        }.toMap
       case _ => Map.empty
     }
 
@@ -132,7 +132,7 @@ private[sql] class OptimizedOrcFileFormat extends OapFileFormat {
         Iterator.empty
       } else {
         val reader = new OapDataReaderV1(file.filePath, m, partitionSchema, requiredSchema,
-          filterScanners, requiredIds, None, oapMetrics, conf, returningBatch, options,
+          requiredIds, None, oapMetrics, conf, returningBatch, options,
           filters, context)
         reader.read(file)
       }

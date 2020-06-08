@@ -28,7 +28,6 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.execution.datasources._
-import org.apache.spark.sql.execution.datasources.oap.index.IndexScanners
 import org.apache.spark.sql.execution.datasources.oap.io._
 import org.apache.spark.sql.execution.datasources.oap.io.OapDataFileProperties.DataFileVersion
 import org.apache.spark.sql.execution.datasources.oap.utils.OapUtils
@@ -156,14 +155,14 @@ private[sql] class OapFileFormat extends FileFormat
           + m.dataReaderClassName.substring(m.dataReaderClassName.lastIndexOf(".") + 1)
           + " ...")
 
-        val filterScanners = indexScanners(m, filters)
-        hitIndexColumns = filterScanners match {
-          case Some(s) =>
-            s.scanners.flatMap { scanner =>
-              scanner.keyNames.map( n => n -> scanner.meta.indexType)
-            }.toMap
-          case _ => Map.empty
-        }
+//        val filterScanners = indexScanners(m, filters)
+//        hitIndexColumns = filterScanners match {
+//          case Some(s) =>
+//            s.scanners.flatMap { scanner =>
+//              scanner.keyNames.map( n => n -> scanner.meta.indexType)
+//            }.toMap
+//          case _ => Map.empty
+//        }
 
         val requiredIds = requiredSchema.map(dataSchema.fields.indexOf(_)).toArray
 
@@ -180,7 +179,7 @@ private[sql] class OapFileFormat extends FileFormat
           OapDataReader.readVersion(fs.open(path), fs.getFileStatus(path).getLen) match {
             case DataFileVersion.OAP_DATAFILE_V1 =>
               val reader = new OapDataReaderV1(file.filePath, m, partitionSchema, requiredSchema,
-                filterScanners, requiredIds, None, oapMetrics, conf, false, options,
+                requiredIds, None, oapMetrics, conf, false, options,
                 filters, None)
               reader.read(file)
             // Actually it shouldn't get to this line, because unsupported version will cause
@@ -224,42 +223,42 @@ private[sql] class OapFileFormat extends FileFormat
     }
   }
 
-  protected def indexScanners(m: DataSourceMeta, filters: Seq[Filter]): Option[IndexScanners] = {
-
-    // Check whether this filter conforms to certain patterns that could benefit from index
-    def canTriggerIndex(filter: Filter): Boolean = {
-      var attr: String = null
-      def checkAttribute(filter: Filter): Boolean = filter match {
-        case Or(left, right) =>
-          checkAttribute(left) && checkAttribute(right)
-        case And(left, right) =>
-          checkAttribute(left) && checkAttribute(right)
-        case EqualTo(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case LessThan(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case LessThanOrEqual(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case GreaterThan(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case GreaterThanOrEqual(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case In(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case IsNull(attribute) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case IsNotNull(attribute) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case StringStartsWith(attribute, _) =>
-          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
-        case _ => false
-      }
-
-      checkAttribute(filter)
-    }
-    // TODO : read code
-    None
-  }
+//  protected def indexScanners(m: DataSourceMeta, filters: Seq[Filter]): Option[IndexScanners] = {
+//
+//    // Check whether this filter conforms to certain patterns that could benefit from index
+//    def canTriggerIndex(filter: Filter): Boolean = {
+//      var attr: String = null
+//      def checkAttribute(filter: Filter): Boolean = filter match {
+//        case Or(left, right) =>
+//          checkAttribute(left) && checkAttribute(right)
+//        case And(left, right) =>
+//          checkAttribute(left) && checkAttribute(right)
+//        case EqualTo(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case LessThan(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case LessThanOrEqual(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case GreaterThan(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case GreaterThanOrEqual(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case In(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case IsNull(attribute) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case IsNotNull(attribute) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case StringStartsWith(attribute, _) =>
+//          if (attr ==  null || attr == attribute) {attr = attribute; true} else false
+//        case _ => false
+//      }
+//
+//      checkAttribute(filter)
+//    }
+//    // TODO : read code
+//    None
+//  }
 }
 
 private[oap] object INDEX_STAT extends Enumeration {

@@ -591,33 +591,6 @@ class VMemCache() extends OapCache with Logging {
     cacheTotalSize = status(2)
     logDebug(s"Current status is evict:$cacheEvictCount," +
       s" count:$cacheTotalCount, size:$cacheTotalSize")
-
-//    if (fiberType == FiberType.INDEX) {
-//      CacheStats(
-//        0, 0,
-//        cacheTotalCount, cacheTotalSize,
-//        cacheGuardian.pendingFiberCount, // pendingFiberCount
-//        cacheGuardian.pendingFiberSize, // pendingFiberSize
-//        0, 0, 0, 0, 0, // For index cache, the data fiber metrics should always be zero
-//        cacheHitCount.get(), // indexFiberHitCount
-//        cacheMissCount.get(), // indexFiberMissCount
-//        cacheHitCount.get(), // indexFiberLoadCount
-//        cacheTotalGetTime.get(), // indexTotalLoadTime
-//        cacheEvictCount // indexEvictionCount
-//      )
-//    } else {
-//      CacheStats(
-//        cacheTotalCount, cacheTotalSize,
-//        0, 0,
-//        cacheGuardian.pendingFiberCount, // pendingFiberCount
-//        cacheGuardian.pendingFiberSize, // pendingFiberSize
-//        cacheHitCount.get(), // dataFiberHitCount
-//        cacheMissCount.get(), // dataFiberMissCount
-//        cacheHitCount.get(), // dataFiberLoadCount
-//        cacheTotalGetTime.get(), // dataTotalLoadTime
-//        cacheEvictCount, // dataEvictionCount
-//        0, 0, 0, 0, 0) // For data cache, the index fiber metrics should always be zero
-//    }
     CacheStats(
       cacheTotalCount, cacheTotalSize,
       cacheGuardian.pendingFiberCount, // pendingFiberCount
@@ -627,7 +600,6 @@ class VMemCache() extends OapCache with Logging {
       cacheHitCount.get(), // dataFiberLoadCount
       cacheTotalGetTime.get(), // dataTotalLoadTime
       cacheEvictCount) // dataEvictionCount
-//      0, 0, 0, 0, 0) // For data cache, the index fiber metrics should always be zero
   }
 
   override def cacheCount: Long = 0
