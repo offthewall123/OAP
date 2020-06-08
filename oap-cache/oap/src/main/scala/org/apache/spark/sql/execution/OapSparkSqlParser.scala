@@ -120,26 +120,6 @@ class OapSqlBaseAstBuilder(conf: SQLConf) extends OapSqlBaseBaseVisitor[AnyRef] 
 
   override def visitPassThrough(ctx: PassThroughContext): LogicalPlan = null
 
-  override def visitIndexCols(ctx: IndexColsContext): Array[IndexColumn] = withOrigin(ctx) {
-    ctx.indexCol.toArray(new Array[IndexColContext](ctx.indexCol.size)).map(visitIndexCol)
-  }
-
-  override def visitIndexCol(ctx: IndexColContext): IndexColumn = withOrigin(ctx) {
-    IndexColumn(ctx.identifier.getText, ctx.DESC == null)
-  }
-
-  override def visitIndexType(ctx: IndexTypeContext): OapIndexType = if (ctx == null) {
-    BTreeIndexType
-  } else {
-    withOrigin(ctx) {
-      if (ctx.BTREE != null) {
-        BTreeIndexType
-      } else {
-        BitMapIndexType
-      }
-    }
-  }
-
   override def visitTableIdentifier(ctx: TableIdentifierContext): TableIdentifier = withOrigin(ctx) {
     TableIdentifier(ctx.table.getText, Option(ctx.db).map(_.getText))
   }

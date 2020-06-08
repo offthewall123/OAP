@@ -41,7 +41,6 @@ private[sql] class FiberCacheManager(
   private val SIMPLE_CACHE = "simple"
   private val NO_EVICT_CACHE = "noevict"
   private val VMEM_CACHE = "vmem"
-//  private val MIX_CACHE = "mix"
   private val EXTERNAL_CACHE = "external"
   private val DEFAULT_CACHE_STRATEGY = GUAVA_CACHE
 

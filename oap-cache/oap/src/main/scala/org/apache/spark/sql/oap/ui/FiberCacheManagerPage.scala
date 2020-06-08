@@ -59,8 +59,6 @@ class FiberCacheManagerSummary private[spark](
     val backendCacheCount: Long,
     val dataFiberSize: Long,
     val dataFiberCount: Long,
-//    val indexFiberSize: Long,
-//    val indexFiberCount: Long,
     val pendingFiberSize: Long,
     val pendingFiberCount: Long,
     val dataFiberHitCount: Long,
@@ -68,8 +66,3 @@ class FiberCacheManagerSummary private[spark](
     val dataFiberLoadCount: Long,
     val dataTotalLoadTime: Long,
     val dataEvictionCount: Long)
-//    val indexFiberHitCount: Long,
-//    val indexFiberMissCount: Long,
-//    val indexFiberLoadCount: Long,
-//    val indexTotalLoadTime: Long,
-//    val indexEvictionCount: Long)
