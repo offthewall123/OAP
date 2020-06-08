@@ -237,51 +237,51 @@ private[oap] class OapDataReaderV1(
     }
 
     filterScanners match {
-      case Some(indexScanners) if indexScanners.isIndexFileBeneficial(path, conf) =>
-        def getRowIds(options: Map[String, String]): Array[Int] = {
-          indexScanners.initialize(path, conf)
-
-          _totalRows = indexScanners.totalRows()
-
-          // total Row count can be get from the index scanner
-          val limit = options.getOrElse(OapFileFormat.OAP_QUERY_LIMIT_OPTION_KEY, "0").toInt
-          val rowIds = if (limit > 0) {
-            // Order limit scan options
-            val isAscending = options.getOrElse(
-              OapFileFormat.OAP_QUERY_ORDER_OPTION_KEY, "true").toBoolean
-            val sameOrder = !((indexScanners.order == Ascending) ^ isAscending)
-
-            if (sameOrder) {
-              indexScanners.take(limit).toArray
-            } else {
-              indexScanners.toArray.reverse.take(limit)
-            }
-          } else {
-            indexScanners.toArray
-          }
-
-          // Parquet reader does not support backward scan, so rowIds must be sorted.
-          // Actually Orc readers support the backward scan, thus no need to sort row Ids.
-          // But with the sorted row Ids, the adjacment rows will be scanned in the same batch.
-          // This will reduce IO cost.
-          if (meta.dataReaderClassName.equals(OapFileFormat.PARQUET_DATA_FILE_CLASSNAME) ||
-            meta.dataReaderClassName.equals(OapFileFormat.ORC_DATA_FILE_CLASSNAME)) {
-            rowIds.sorted
-          } else {
-            rowIds
-          }
-        }
-
-
-        val start = if (log.isDebugEnabled) System.currentTimeMillis else 0
-        val rows = getRowIds(options)
-        val iter = fileScanner.iteratorWithRowIds(requiredIds, rows, filters)
-        val end = if (log.isDebugEnabled) System.currentTimeMillis else 0
-
-        _indexStat = HIT_INDEX
-        _rowsReadWhenHitIndex = Some(rows.length)
-        logDebug("Construct File Iterator: " + (end - start) + "ms")
-        iter
+//      case Some(indexScanners) if indexScanners.isIndexFileBeneficial(path, conf) =>
+//        def getRowIds(options: Map[String, String]): Array[Int] = {
+//          indexScanners.initialize(path, conf)
+//
+//          _totalRows = indexScanners.totalRows()
+//
+//          // total Row count can be get from the index scanner
+//          val limit = options.getOrElse(OapFileFormat.OAP_QUERY_LIMIT_OPTION_KEY, "0").toInt
+//          val rowIds = if (limit > 0) {
+//            // Order limit scan options
+//            val isAscending = options.getOrElse(
+//              OapFileFormat.OAP_QUERY_ORDER_OPTION_KEY, "true").toBoolean
+//            val sameOrder = !((indexScanners.order == Ascending) ^ isAscending)
+//
+//            if (sameOrder) {
+//              indexScanners.take(limit).toArray
+//            } else {
+//              indexScanners.toArray.reverse.take(limit)
+//            }
+//          } else {
+//            indexScanners.toArray
+//          }
+//
+//          // Parquet reader does not support backward scan, so rowIds must be sorted.
+//          // Actually Orc readers support the backward scan, thus no need to sort row Ids.
+//          // But with the sorted row Ids, the adjacment rows will be scanned in the same batch.
+//          // This will reduce IO cost.
+//          if (meta.dataReaderClassName.equals(OapFileFormat.PARQUET_DATA_FILE_CLASSNAME) ||
+//            meta.dataReaderClassName.equals(OapFileFormat.ORC_DATA_FILE_CLASSNAME)) {
+//            rowIds.sorted
+//          } else {
+//            rowIds
+//          }
+//        }
+//
+//
+//        val start = if (log.isDebugEnabled) System.currentTimeMillis else 0
+//        val rows = getRowIds(options)
+//        val iter = fileScanner.iteratorWithRowIds(requiredIds, rows, filters)
+//        val end = if (log.isDebugEnabled) System.currentTimeMillis else 0
+//
+//        _indexStat = HIT_INDEX
+//        _rowsReadWhenHitIndex = Some(rows.length)
+//        logDebug("Construct File Iterator: " + (end - start) + "ms")
+//        iter
       case Some(_) =>
         _indexStat = IGNORE_INDEX
         fullScan

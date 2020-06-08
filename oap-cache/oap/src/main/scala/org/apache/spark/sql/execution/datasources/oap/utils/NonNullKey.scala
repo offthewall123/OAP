@@ -22,7 +22,6 @@ import java.io.OutputStream
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
-import org.apache.spark.sql.execution.datasources.oap.index.IndexUtils
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -37,28 +36,28 @@ private[oap] class NonNullKeyWriter(schema: StructType) {
   private def getWriterFunctionBasedOnType(
       dt: DataType): (OutputStream, Any) => Unit = dt match {
     case BooleanType =>
-      (out: OutputStream, b: Any) => IndexUtils.writeBoolean(out, b.asInstanceOf[Boolean])
+      (out: OutputStream, b: Any) => OutputStreamUtil.writeBoolean(out, b.asInstanceOf[Boolean])
     case ByteType =>
-      (out: OutputStream, b: Any) => IndexUtils.writeByte(out, b.asInstanceOf[Byte])
+      (out: OutputStream, b: Any) => OutputStreamUtil.writeByte(out, b.asInstanceOf[Byte])
     case ShortType =>
-      (out: OutputStream, sh: Any) => IndexUtils.writeShort(out, sh.asInstanceOf[Short])
+      (out: OutputStream, sh: Any) => OutputStreamUtil.writeShort(out, sh.asInstanceOf[Short])
     case IntegerType =>
-      (out: OutputStream, i: Any) => IndexUtils.writeInt(out, i.asInstanceOf[Int])
+      (out: OutputStream, i: Any) => OutputStreamUtil.writeInt(out, i.asInstanceOf[Int])
     case LongType =>
-      (out: OutputStream, l: Any) => IndexUtils.writeLong(out, l.asInstanceOf[Long])
+      (out: OutputStream, l: Any) => OutputStreamUtil.writeLong(out, l.asInstanceOf[Long])
     case FloatType =>
-      (out: OutputStream, f: Any) => IndexUtils.writeFloat(out, f.asInstanceOf[Float])
+      (out: OutputStream, f: Any) => OutputStreamUtil.writeFloat(out, f.asInstanceOf[Float])
     case DoubleType =>
-      (out: OutputStream, d: Any) => IndexUtils.writeDouble(out, d.asInstanceOf[Double])
+      (out: OutputStream, d: Any) => OutputStreamUtil.writeDouble(out, d.asInstanceOf[Double])
     case StringType =>
       (out: OutputStream, s: Any) =>
         val bytes = s.asInstanceOf[UTF8String].getBytes
-        IndexUtils.writeInt(out, bytes.length)
+        OutputStreamUtil.writeInt(out, bytes.length)
         out.write(bytes)
     case BinaryType =>
       (out: OutputStream, b: Any) =>
         val binary = b.asInstanceOf[Array[Byte]]
-        IndexUtils.writeInt(out, binary.length)
+        OutputStreamUtil.writeInt(out, binary.length)
         out.write(binary)
     case other => throw new OapException(s"OAP index currently doesn't support data type $other")
   }
@@ -88,12 +87,12 @@ private[oap] class NonNullKeyReader(schema: StructType) {
       case DateType => (fiberCache.getInt(offset), DateType.defaultSize)
       case StringType =>
         val length = fiberCache.getInt(offset)
-        val string = fiberCache.getUTF8String(offset + IndexUtils.INT_SIZE, length)
-        (string, IndexUtils.INT_SIZE + length)
+        val string = fiberCache.getUTF8String(offset + OutputStreamUtil.INT_SIZE, length)
+        (string, OutputStreamUtil.INT_SIZE + length)
       case BinaryType =>
         val length = fiberCache.getInt(offset)
-        val bytes = fiberCache.getBytes(offset + IndexUtils.INT_SIZE, length)
-        (bytes, IndexUtils.INT_SIZE + bytes.length)
+        val bytes = fiberCache.getBytes(offset + OutputStreamUtil.INT_SIZE, length)
+        (bytes, OutputStreamUtil.INT_SIZE + bytes.length)
       case other => throw new OapException(s"OAP index currently doesn't support data type $other")
     }
 

@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.execution.datasources.oap.Key
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
 import org.apache.spark.sql.execution.datasources.oap.index._
+import org.apache.spark.sql.execution.datasources.oap.utils.OutputStreamUtil
 import org.apache.spark.sql.types.StructType
 
 private[oap] class MinMaxStatisticsReader(schema: StructType) extends StatisticsReader(schema) {
@@ -110,16 +111,16 @@ private[oap] class MinMaxStatisticsWriter(
     if (min != null) {
       val tempWriter = new ByteArrayOutputStream()
       nnkw.writeKey(tempWriter, min)
-      IndexUtils.writeInt(writer, tempWriter.size)
+      OutputStreamUtil.writeInt(writer, tempWriter.size)
       nnkw.writeKey(tempWriter, max)
-      IndexUtils.writeInt(writer, tempWriter.size)
-      offset += IndexUtils.INT_SIZE * 2
+      OutputStreamUtil.writeInt(writer, tempWriter.size)
+      offset += OutputStreamUtil.INT_SIZE * 2
       writer.write(tempWriter.toByteArray)
       offset += tempWriter.size
     } else {
       // No valid min/max.
-      IndexUtils.writeInt(writer, 0)
-      offset += IndexUtils.INT_SIZE
+      OutputStreamUtil.writeInt(writer, 0)
+      offset += OutputStreamUtil.INT_SIZE
     }
     offset
   }

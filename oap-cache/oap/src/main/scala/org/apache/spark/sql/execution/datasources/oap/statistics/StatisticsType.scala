@@ -31,7 +31,7 @@ private[oap] object StatisticsType {
     case TYPE_MIN_MAX => Some(new MinMaxStatisticsReader(_))
     case TYPE_SAMPLE_BASE => Some(new SampleBasedStatisticsReader(_))
     case TYPE_PART_BY_VALUE => Some(new PartByValueStatisticsReader(_))
-    case TYPE_BLOOM_FILTER => Some(new BloomFilterStatisticsReader(_))
+//    case TYPE_BLOOM_FILTER => Some(new BloomFilterStatisticsReader(_))
     case _ => None
   }
 
@@ -44,9 +44,9 @@ private[oap] object StatisticsType {
     case "PARTBYVALUE" =>
       Some((schema: StructType, conf: Configuration) =>
         new PartByValueStatisticsWriter(schema, conf))
-    case "BLOOM" =>
-      Some((schema: StructType, conf: Configuration) =>
-        new BloomFilterStatisticsWriter(schema, conf))
+//    case "BLOOM" =>
+//      Some((schema: StructType, conf: Configuration) =>
+//        new BloomFilterStatisticsWriter(schema, conf))
     case _ => None
   }
 }

@@ -28,6 +28,7 @@ import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.execution.datasources.oap.Key
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
 import org.apache.spark.sql.execution.datasources.oap.index._
+import org.apache.spark.sql.execution.datasources.oap.utils.OutputStreamUtil
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.types.StructType
 
@@ -161,14 +162,14 @@ private[oap] class PartByValueStatisticsWriter(schema: StructType, conf: Configu
   // this is the common part used by write and write2
   private def internalWrite(writer: OutputStream, offsetP: Int): Int = {
     var offset = offsetP
-    IndexUtils.writeInt(writer, metas.length)
-    offset += IndexUtils.INT_SIZE
+    OutputStreamUtil.writeInt(writer, metas.length)
+    offset += OutputStreamUtil.INT_SIZE
     val tempWriter = new ByteArrayOutputStream()
     metas.foreach(meta => {
       nnkw.writeKey(tempWriter, meta.row)
-      IndexUtils.writeInt(writer, meta.curMaxId)
-      IndexUtils.writeInt(writer, meta.accumulatorCnt)
-      IndexUtils.writeInt(writer, tempWriter.size())
+      OutputStreamUtil.writeInt(writer, meta.curMaxId)
+      OutputStreamUtil.writeInt(writer, meta.accumulatorCnt)
+      OutputStreamUtil.writeInt(writer, tempWriter.size())
       offset += 12
     })
     writer.write(tempWriter.toByteArray)

@@ -28,7 +28,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.execution.datasources._
-import org.apache.spark.sql.execution.datasources.oap.index.{IndexContext, IndexScanners, ScannerBuilder}
+import org.apache.spark.sql.execution.datasources.oap.index.IndexScanners
 import org.apache.spark.sql.execution.datasources.oap.io._
 import org.apache.spark.sql.execution.datasources.oap.io.OapDataFileProperties.DataFileVersion
 import org.apache.spark.sql.execution.datasources.oap.utils.OapUtils
@@ -258,26 +258,27 @@ private[sql] class OapFileFormat extends FileFormat
       checkAttribute(filter)
     }
 
-    val ic = new IndexContext(m)
-
-    if (m.indexMetas.nonEmpty) { // check and use index
-      logDebug("Supported Filters by Oap:")
-      // filter out the "filters" on which we can use index
-      val supportFilters = filters.toArray.filter(canTriggerIndex)
-      // After filtered, supportFilter only contains:
-      // 1. Or predicate that contains only one attribute internally;
-      // 2. Some atomic predicates, such as LessThan, EqualTo, etc.
-      if (supportFilters.nonEmpty) {
-        // determine whether we can use index
-        supportFilters.foreach(filter => logDebug("\t" + filter.toString))
-        // get index options such as limit, order, etc.
-        val indexOptions = options.filterKeys(OapFileFormat.oapOptimizationKeySeq.contains(_))
-        val maxChooseSize = sparkSession.conf.get(OapConf.OAP_INDEXER_CHOICE_MAX_SIZE)
-        val indexDisableList = sparkSession.conf.get(OapConf.OAP_INDEX_DISABLE_LIST)
-        ScannerBuilder.build(supportFilters, ic, indexOptions, maxChooseSize, indexDisableList)
-      }
-    }
-    ic.getScanners
+//    val ic = new IndexContext(m)
+//
+//    if (m.indexMetas.nonEmpty) { // check and use index
+//      logDebug("Supported Filters by Oap:")
+//      // filter out the "filters" on which we can use index
+//      val supportFilters = filters.toArray.filter(canTriggerIndex)
+//      // After filtered, supportFilter only contains:
+//      // 1. Or predicate that contains only one attribute internally;
+//      // 2. Some atomic predicates, such as LessThan, EqualTo, etc.
+//      if (supportFilters.nonEmpty) {
+//        // determine whether we can use index
+//        supportFilters.foreach(filter => logDebug("\t" + filter.toString))
+//        // get index options such as limit, order, etc.
+//        val indexOptions = options.filterKeys(OapFileFormat.oapOptimizationKeySeq.contains(_))
+//        val maxChooseSize = sparkSession.conf.get(OapConf.OAP_INDEXER_CHOICE_MAX_SIZE)
+//        val indexDisableList = sparkSession.conf.get(OapConf.OAP_INDEX_DISABLE_LIST)
+//        ScannerBuilder.build(supportFilters, ic, indexOptions, maxChooseSize, indexDisableList)
+//      }
+//    }
+//    ic.getScanners
+    None
   }
 }
 

@@ -27,7 +27,8 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.execution.datasources.oap.Key
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
-import org.apache.spark.sql.execution.datasources.oap.index._
+import org.apache.spark.sql.execution.datasources.oap.index.{BloomFilter, RangeInterval}
+import org.apache.spark.sql.execution.datasources.oap.utils.OutputStreamUtil
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.types._
 
@@ -141,11 +142,11 @@ private[oap] class BloomFilterStatisticsWriter(
     // ...
     // long $numOfLong      8 Bytes, Long, the $numOfLong -th element in bit array
     val bfBitArray = bfIndex.getBitMapLongArray
-    IndexUtils.writeInt(writer, bfBitArray.length) // bfBitArray length
-    IndexUtils.writeInt(writer, bfIndex.getNumOfHashFunc) // numOfHashFunc
+    OutputStreamUtil.writeInt(writer, bfBitArray.length) // bfBitArray length
+    OutputStreamUtil.writeInt(writer, bfIndex.getNumOfHashFunc) // numOfHashFunc
     offset += 8
     bfBitArray.foreach(l => {
-      IndexUtils.writeLong(writer, l)
+      OutputStreamUtil.writeLong(writer, l)
       offset += 8
     })
     offset

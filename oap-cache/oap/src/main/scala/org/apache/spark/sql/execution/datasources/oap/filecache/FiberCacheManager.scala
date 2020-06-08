@@ -181,18 +181,18 @@ private[sql] class FiberCacheManager(
   /**
    * Used by IndexFile
    */
-  def toIndexFiberCache(in: FSDataInputStream, position: Long, length: Int): FiberCache = {
-    val bytes = new Array[Byte](length)
-    in.readFully(position, bytes)
-    toFiberCache(FiberType.INDEX, bytes)
-  }
+//  def toIndexFiberCache(in: FSDataInputStream, position: Long, length: Int): FiberCache = {
+//    val bytes = new Array[Byte](length)
+//    in.readFully(position, bytes)
+//    toFiberCache(FiberType.INDEX, bytes)
+//  }
 
-  /**
-   * Used by IndexFile. For decompressed data
-   */
-  def toIndexFiberCache(bytes: Array[Byte]): FiberCache = {
-    toFiberCache(FiberType.INDEX, bytes)
-  }
+//  /**
+//   * Used by IndexFile. For decompressed data
+//   */
+//  def toIndexFiberCache(bytes: Array[Byte]): FiberCache = {
+//    toFiberCache(FiberType.INDEX, bytes)
+//  }
 
   /**
    * Used by OapDataFile since we need to parse the raw data in on-heap memory before put it into

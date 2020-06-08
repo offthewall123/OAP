@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.execution.datasources.oap.Key
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
 import org.apache.spark.sql.execution.datasources.oap.index._
+import org.apache.spark.sql.execution.datasources.oap.utils.OutputStreamUtil
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.types._
 
@@ -87,13 +88,13 @@ class StatisticsWriteManager {
   def write(out: OutputStream): Int = {
     var offset = 0
 
-    IndexUtils.writeLong(out, StatisticsManager.STATISTICSMASK)
+    OutputStreamUtil.writeLong(out, StatisticsManager.STATISTICSMASK)
     offset += 8
 
-    IndexUtils.writeInt(out, stats.length)
+    OutputStreamUtil.writeInt(out, stats.length)
     offset += 4
     stats.foreach { stat =>
-      IndexUtils.writeInt(out, stat.id)
+      OutputStreamUtil.writeInt(out, stat.id)
       offset += 4
     }
 

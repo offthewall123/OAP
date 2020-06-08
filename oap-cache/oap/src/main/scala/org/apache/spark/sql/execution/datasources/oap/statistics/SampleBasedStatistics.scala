@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
 import org.apache.spark.sql.execution.datasources.oap.Key
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
 import org.apache.spark.sql.execution.datasources.oap.index._
+import org.apache.spark.sql.execution.datasources.oap.utils.OutputStreamUtil
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.types.StructType
 
@@ -52,10 +53,10 @@ private[oap] class SampleBasedStatisticsReader(
     var rowOffset = 0
     for (i <- 0 until size) {
       sampleArray(i) = nnkr.readKey(
-        fiberCache, readOffset + size * IndexUtils.INT_SIZE + rowOffset)._1
-      rowOffset = fiberCache.getInt(readOffset + i * IndexUtils.INT_SIZE)
+        fiberCache, readOffset + size * OutputStreamUtil.INT_SIZE + rowOffset)._1
+      rowOffset = fiberCache.getInt(readOffset + i * OutputStreamUtil.INT_SIZE)
     }
-    readOffset += (rowOffset + size * IndexUtils.INT_SIZE)
+    readOffset += (rowOffset + size * OutputStreamUtil.INT_SIZE)
     readOffset - offset
   }
 
@@ -92,13 +93,13 @@ private[oap] class SampleBasedStatisticsWriter(schema: StructType, conf: Configu
   private def internalWrite(writer: OutputStream, offsetP: Int, sizeP: Int): Int = {
     var offset = offsetP
     val size = sizeP
-    IndexUtils.writeInt(writer, size)
-    offset += IndexUtils.INT_SIZE
+    OutputStreamUtil.writeInt(writer, size)
+    offset += OutputStreamUtil.INT_SIZE
     val tempWriter = new ByteArrayOutputStream()
     sampleArray.foreach(key => {
       nnkw.writeKey(tempWriter, key)
-      IndexUtils.writeInt(writer, tempWriter.size())
-      offset += IndexUtils.INT_SIZE
+      OutputStreamUtil.writeInt(writer, tempWriter.size())
+      offset += OutputStreamUtil.INT_SIZE
     })
     offset += tempWriter.size()
     writer.write(tempWriter.toByteArray)

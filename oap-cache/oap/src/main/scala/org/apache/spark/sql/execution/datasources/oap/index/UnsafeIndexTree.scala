@@ -149,69 +149,69 @@ private[oap] object UnsafeIndexNode {
   }
 }
 
-private[oap] class CurrentKey(node: IndexNode, keyIdx: Int, valueIdx: Int, indexLimit: Int = 0) {
-  assert(node.isLeaf, "Should be Leaf Node")
-
-  private var currentNode: IndexNode = node
-  // currentKeyIdx is the flag that we check if we are in the end of the tree traversal
-  private var currentKeyIdx: Int = if (node.length > keyIdx) {
-    keyIdx
-  } else {
-    CurrentKey.INVALID_KEY_INDEX
-  }
-
-  private val limitScanNum: Int = indexLimit
-
-  private var currentScanNum: Int = 1
-
-  private var currentValueIdx: Int = valueIdx
-
-  private var currentValues: IndexNodeValue = if (currentKeyIdx != CurrentKey.INVALID_KEY_INDEX) {
-    currentNode.valueAt(currentKeyIdx)
-  } else {
-    null
-  }
-
-  def currentKey: Key = if (currentKeyIdx == CurrentKey.INVALID_KEY_INDEX) {
-    IndexScanner.DUMMY_KEY_END
-  } else {
-    currentNode.keyAt(currentKeyIdx)
-  }
-
-  def currentRowId: Long = currentValues(currentValueIdx)
-
-  def moveNextValue: Unit = {
-    if (currentValueIdx < currentValues.length - 1 && limitScanNum == 0) {
-      currentValueIdx += 1
-    } else if (currentValueIdx < currentValues.length - 1 &&
-      limitScanNum > 0 && currentScanNum < limitScanNum) {
-      currentValueIdx += 1
-      currentScanNum += 1
-    } else {
-      moveNextKey
-    }
-  }
-
-  def moveNextKey: Unit = {
-    currentScanNum = 1
-    if (currentKeyIdx < currentNode.length - 1) {
-      currentKeyIdx += 1
-      currentValueIdx = 0
-      currentValues = currentNode.valueAt(currentKeyIdx)
-    } else {
-      currentNode = currentNode.next
-      if (currentNode != null) {
-        currentKeyIdx = 0
-        currentValueIdx = 0
-        currentValues = currentNode.valueAt(currentKeyIdx)
-      } else {
-        currentKeyIdx = CurrentKey.INVALID_KEY_INDEX
-      }
-    }
-  }
-
-  def isEnd: Boolean = currentNode == null || currentKey == IndexScanner.DUMMY_KEY_END
-}
+// private[oap] class CurrentKey(node: IndexNode, keyIdx: Int, valueIdx: Int, indexLimit: Int = 0) {
+//  assert(node.isLeaf, "Should be Leaf Node")
+//
+//  private var currentNode: IndexNode = node
+//  // currentKeyIdx is the flag that we check if we are in the end of the tree traversal
+//  private var currentKeyIdx: Int = if (node.length > keyIdx) {
+//    keyIdx
+//  } else {
+//    CurrentKey.INVALID_KEY_INDEX
+//  }
+//
+//  private val limitScanNum: Int = indexLimit
+//
+//  private var currentScanNum: Int = 1
+//
+//  private var currentValueIdx: Int = valueIdx
+//
+//  private var currentValues: IndexNodeValue = if (currentKeyIdx != CurrentKey.INVALID_KEY_INDEX) {
+//    currentNode.valueAt(currentKeyIdx)
+//  } else {
+//    null
+//  }
+//
+//  def currentKey: Key = if (currentKeyIdx == CurrentKey.INVALID_KEY_INDEX) {
+//    IndexScanner.DUMMY_KEY_END
+//  } else {
+//    currentNode.keyAt(currentKeyIdx)
+//  }
+//
+//  def currentRowId: Long = currentValues(currentValueIdx)
+//
+//  def moveNextValue: Unit = {
+//    if (currentValueIdx < currentValues.length - 1 && limitScanNum == 0) {
+//      currentValueIdx += 1
+//    } else if (currentValueIdx < currentValues.length - 1 &&
+//      limitScanNum > 0 && currentScanNum < limitScanNum) {
+//      currentValueIdx += 1
+//      currentScanNum += 1
+//    } else {
+//      moveNextKey
+//    }
+//  }
+//
+//  def moveNextKey: Unit = {
+//    currentScanNum = 1
+//    if (currentKeyIdx < currentNode.length - 1) {
+//      currentKeyIdx += 1
+//      currentValueIdx = 0
+//      currentValues = currentNode.valueAt(currentKeyIdx)
+//    } else {
+//      currentNode = currentNode.next
+//      if (currentNode != null) {
+//        currentKeyIdx = 0
+//        currentValueIdx = 0
+//        currentValues = currentNode.valueAt(currentKeyIdx)
+//      } else {
+//        currentKeyIdx = CurrentKey.INVALID_KEY_INDEX
+//      }
+//    }
+//  }
+//
+//  def isEnd: Boolean = currentNode == null || currentKey == IndexScanner.DUMMY_KEY_END
+// }
 
 private[oap] class RangeInterval(
     s: Key,

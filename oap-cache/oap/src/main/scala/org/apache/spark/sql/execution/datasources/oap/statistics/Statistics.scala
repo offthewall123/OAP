@@ -27,8 +27,8 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.BaseOrdering
 import org.apache.spark.sql.execution.datasources.oap.Key
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberCache
-import org.apache.spark.sql.execution.datasources.oap.index._
-import org.apache.spark.sql.execution.datasources.oap.utils.{NonNullKeyReader, NonNullKeyWriter}
+import org.apache.spark.sql.execution.datasources.oap.index.RangeInterval
+import org.apache.spark.sql.execution.datasources.oap.utils.{NonNullKeyReader, NonNullKeyWriter, OutputStreamUtil}
 import org.apache.spark.sql.types._
 
 abstract class StatisticsReader(schema: StructType) {
@@ -81,13 +81,13 @@ abstract class StatisticsWriter(schema: StructType, conf: Configuration) {
    * @return number of bytes written in writer
    */
   def write(writer: OutputStream, sortedKeys: ArrayBuffer[Key]): Int = {
-    IndexUtils.writeInt(writer, id)
+    OutputStreamUtil.writeInt(writer, id)
     4
   }
 
   // this write2 is used when enable externalSorter
   def write2(writer: OutputStream): Int = {
-    IndexUtils.writeInt(writer, id)
+    OutputStreamUtil.writeInt(writer, id)
     4
   }
 }
