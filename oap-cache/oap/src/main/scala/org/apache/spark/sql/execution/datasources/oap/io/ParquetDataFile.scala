@@ -92,7 +92,7 @@ private[oap] case class ParquetDataFile(
     inUseFiberCache.indices.foreach(release)
   }
 
-  def cache(groupId: Int, fiberId: Int): FiberCache = {
+  def cache(groupId: Int, fiberId: Int, fiber: FiberId = null): FiberCache = {
     if (fiberDataReader == null) {
       fiberDataReader =
         ParquetFiberDataReader.open(configuration, file, meta.footer.toParquetMetadata)
