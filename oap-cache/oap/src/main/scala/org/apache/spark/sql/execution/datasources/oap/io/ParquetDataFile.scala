@@ -102,7 +102,7 @@ private[oap] case class ParquetDataFile(
     // setting required column to conf enables us to
     // Vectorized read & cache certain(not all) columns
     addRequestSchemaToConf(conf, Array(fiberId))
-    ParquetFiberDataLoader(conf, fiberDataReader, groupId).loadSingleColumn
+    ParquetFiberDataLoader(conf, fiberDataReader, groupId).loadSingleColumn(fiber)
   }
 
   def iterator(
