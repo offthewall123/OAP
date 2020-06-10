@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
 import scala.util.Success
 
 import com.intel.oap.common.unsafe.PersistentMemoryPlatform
+import org.apache.arrow.plasma.PlasmaClient
 
 import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
@@ -55,7 +56,9 @@ case class MemoryBlockHolder(
                               baseOffset: Long,
                               length: Long,
                               occupiedSize: Long,
-                              source: SourceEnum.SourceEnum)
+                              source: SourceEnum.SourceEnum,
+                              fiberId: FiberId = null,
+                              client: PlasmaClient = null)
 
 private[sql] abstract class MemoryManager {
   /**
@@ -404,6 +407,23 @@ private[filecache] class DaxKmemMemoryManager(sparkEnv: SparkEnv)
 
   override def memorySize: Long = _memorySize
 
+}
+
+private[filecache] class PlasmaMemoryManager(sparkEnv: SparkEnv)
+  extends MemoryManager with Logging {
+  override private[filecache] def allocate(size: Long) = {
+    throw new OapException("Unsupported Exception!!")
+  }
+
+  override private[filecache] def free(block: MemoryBlockHolder): Unit = {
+    throw new OapException("Unsupported Exception!!")
+  }
+
+  override def isDcpmmUsed(): Boolean = true
+
+  override def memorySize: Long = 0
+
+  override def memoryUsed: Long = 0
 }
 
 private[filecache] class HybridMemoryManager(sparkEnv: SparkEnv)

@@ -352,6 +352,8 @@ trait OapCache {
     cache
   }
 
+  def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null): FiberCache =
+    OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 }
 
 class NoEvictPMCache(pmSize: Long,
@@ -931,10 +933,18 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private def emptyDataFiber(fiberLength: Long): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 
-  private def DataFiber(bb: ByteBuffer): FiberCache = {
+  private def DataFiber(bb: ByteBuffer, fiberId: FiberId,
+                        client: plasma.PlasmaClient): FiberCache = {
     val fiberData = MemoryBlockHolder(null, bb.asInstanceOf[DirectBuffer].address(),
-                                      bb.capacity(), bb.capacity(), SourceEnum.PM)
+                                      bb.capacity(), bb.capacity(), SourceEnum.PM, fiberId, client)
     FiberCache(FiberType.DATA, fiberData)
+  }
+
+  override def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null ): FiberCache = {
+    val objectId = hash(fiberId.toString)
+    val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+    val buf: ByteBuffer = plasmaClient.create(objectId, fiberLength.toInt)
+    DataFiber(buf, fiberId, plasmaClient)
   }
 
   var fiberSet = scala.collection.mutable.Set[FiberId]()
@@ -987,13 +997,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
         val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
         cacheHitCount.addAndGet(1)
-        fiberCache = DataFiber(buf)
-        fiberCache.plasmaClient = plasmaClient
-//        fiberCache = emptyDataFiber(buf.capacity())
-//        fiberCache.fiberId = fiberId
-//        Platform.copyMemory(null, buf.asInstanceOf[DirectBuffer].address(),
-//          null, fiberCache.fiberData.baseOffset, buf.capacity())
-//        plasmaClient.release(objectId)
+        fiberCache = DataFiber(buf, fiberId, plasmaClient)
       }
       catch {
         case getException : plasma.exceptions.PlasmaGetException =>
@@ -1026,15 +1030,17 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     if( !contains(fiberId)) {
 //      val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
       val plasmaClient = fiber.plasmaClient
-      try {
+      plasmaClient.seal(objectId)
+      plasmaClient.release(objectId)
+//      try {
 //        val buf = plasmaClient.create(objectId, fiber.size().toInt)
 //        Platform.copyMemory(null, fiber.fiberData.baseOffset,
 //          null, buf.asInstanceOf[DirectBuffer].address(), fiber.size())
-        plasmaClient.seal(objectId)
-        plasmaClient.release(objectId)
-      } catch {
-        case e: DuplicateObjectException => logWarning(e.getMessage)
-      }
+//        plasmaClient.seal(objectId)
+//        plasmaClient.release(objectId)
+//      } catch {
+//        case e: DuplicateObjectException => logWarning(e.getMessage)
+//      }
     }
     fiber
   }

@@ -209,6 +209,10 @@ private[sql] class FiberCacheManager(
     FiberCache(FiberType.DATA, allocateFiberMemory(FiberType.DATA, length))
   }
 
+  def getEmptyDataFiberCache(length: Long, fiberId: FiberId = null): FiberCache = {
+    cacheBackend.getEmptyFiber(length, fiberId)
+  }
+
   def releaseIndexCache(indexName: String): Unit = {
     logDebug(s"Going to remove all index cache of $indexName")
     val fiberToBeRemoved = cacheBackend.getFibers.filter {
