@@ -930,6 +930,12 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private def emptyDataFiber(fiberLength: Long): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 
+  private def DataFiber(bb: ByteBuffer): FiberCache = {
+    val fiberData = MemoryBlockHolder(null, bb.asInstanceOf[DirectBuffer].address(),
+                                      bb.capacity(), bb.capacity(), SourceEnum.PM)
+    FiberCache(FiberType.DATA, fiberData)
+  }
+
   var fiberSet = scala.collection.mutable.Set[FiberId]()
   val cacheReadOnlyEnbale = conf.get(OapConf.OAP_EXTERNAL_CACHE_READ_ONLY_ENABLE)
   val clientPoolSize = conf.get(OapConf.OAP_EXTERNAL_CACHE_CLIENT_POOL_SIZE)
@@ -980,11 +986,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
         val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
         cacheHitCount.addAndGet(1)
-        fiberCache = emptyDataFiber(buf.capacity())
-        fiberCache.fiberId = fiberId
-        Platform.copyMemory(null, buf.asInstanceOf[DirectBuffer].address(),
-          null, fiberCache.fiberData.baseOffset, buf.capacity())
-        plasmaClient.release(objectId)
+        fiberCache = DataFiber(buf)
+        fiberCache.plasmaClient = plasmaClient
+//        fiberCache = emptyDataFiber(buf.capacity())
+//        fiberCache.fiberId = fiberId
+//        Platform.copyMemory(null, buf.asInstanceOf[DirectBuffer].address(),
+//          null, fiberCache.fiberData.baseOffset, buf.capacity())
+//        plasmaClient.release(objectId)
       }
       catch {
         case getException : plasma.exceptions.PlasmaGetException =>
@@ -1015,11 +1023,12 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
 
     val objectId = hash(fiberId.toString)
     if( !contains(fiberId)) {
-      val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+//      val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+      val plasmaClient = fiber.plasmaClient
       try {
-        val buf = plasmaClient.create(objectId, fiber.size().toInt)
-        Platform.copyMemory(null, fiber.fiberData.baseOffset,
-          null, buf.asInstanceOf[DirectBuffer].address(), fiber.size())
+//        val buf = plasmaClient.create(objectId, fiber.size().toInt)
+//        Platform.copyMemory(null, fiber.fiberData.baseOffset,
+//          null, buf.asInstanceOf[DirectBuffer].address(), fiber.size())
         plasmaClient.seal(objectId)
         plasmaClient.release(objectId)
       } catch {

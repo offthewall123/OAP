@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 import com.google.common.primitives.Ints
+import org.apache.arrow.plasma.PlasmaClient
 import scala.collection.mutable
 
 import org.apache.spark.internal.Logging
@@ -55,6 +56,8 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
 
   // This suppose to be used when index cache allocation failed
   var originByteArray: Array[Byte] = null
+
+  var plasmaClient: PlasmaClient = null
 
   // We use readLock to lock occupy. _refCount need be atomic to make sure thread-safe
   protected val _refCount = new AtomicLong(0)
