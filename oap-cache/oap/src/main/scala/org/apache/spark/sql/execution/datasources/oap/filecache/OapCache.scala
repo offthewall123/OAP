@@ -934,10 +934,10 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private def emptyDataFiber(fiberLength: Long): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 
-  private def DataFiber(bb: ByteBuffer, fiberId: FiberId,
+  private def DataFiber(bb: ByteBuffer, objectId: Array[Byte],
                         client: plasma.PlasmaClient): FiberCache = {
     val fiberData = MemoryBlockHolder(null, bb.asInstanceOf[DirectBuffer].address(),
-                                      bb.capacity(), bb.capacity(), SourceEnum.PM, fiberId, client)
+                                      bb.capacity(), bb.capacity(), SourceEnum.PM, objectId, client)
     assert(fiberData.client != null)
     FiberCache(FiberType.DATA, fiberData)
   }
@@ -946,7 +946,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
     val buf: ByteBuffer = plasmaClient.create(objectId, fiberLength.toInt)
-    DataFiber(buf, fiberId, plasmaClient)
+    DataFiber(buf, objectId, plasmaClient)
   }
 
   var fiberSet = scala.collection.mutable.Set[FiberId]()
@@ -999,7 +999,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
         val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
         cacheHitCount.addAndGet(1)
-        fiberCache = DataFiber(buf, fiberId, plasmaClient)
+        fiberCache = DataFiber(buf, objectId, plasmaClient)
       }
       catch {
         case getException : plasma.exceptions.PlasmaGetException =>
@@ -1007,8 +1007,9 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
           fiberCache = cache(fiberId)
           cacheMissCount.addAndGet(1)
       }
+      fiberCache.fiberId = fiberId
       fiberCache.occupy()
-//      cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+      cacheGuardian.addRemovalFiber(fiberId, fiberCache)
       fiberCache
     } else {
       if (cacheReadOnlyEnbale) {
@@ -1017,7 +1018,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         cacheMissCount.addAndGet(1)
         fiberSet.add(fiberId)
         fiberCache.occupy()
-        //cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+         cacheGuardian.addRemovalFiber(fiberId, fiberCache)
         fiberCache
       } else {
         val fiberCache = super.cache(fiberId)
@@ -1028,7 +1029,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
 
   override def cache(fiberId: FiberId): FiberCache = {
     val fiber = super.cache(fiberId)
-
+    fiber.fiberId = fiberId
     val objectId = hash(fiberId.toString)
     fiber.fiberData.client.seal(objectId)
     fiber
@@ -1039,12 +1040,10 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   override def getIfPresent(fiber: FiberId): FiberCache = null
 
   override def getFibers: Set[FiberId] = {
-    val set : Set[Array[Byte]] =
-      plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).list().asScala.toSet
-    cacheTotalCount = new AtomicLong(set.size)
+    // Remove plasmaClient.list() since this call have a lot overhead,
+    // especially in multi executor case
+    cacheTotalCount = new AtomicLong(fiberSet.size)
     logDebug("cache total size is " + cacheTotalCount)
-    fiberSet.foreach( fiber =>
-      if ( !set.contains(hash(fiber.toFiberKey()))) fiberSet.remove(fiber) )
     fiberSet.toSet
   }
 

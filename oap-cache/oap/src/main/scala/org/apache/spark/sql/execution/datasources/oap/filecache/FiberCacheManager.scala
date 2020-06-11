@@ -232,6 +232,9 @@ private[sql] class FiberCacheManager(
     cacheAllocator.isDcpmmUsed()
   }
 
+  // TODO: for multithreadCacheGuardian, we need refactor releaseFiberCache method,
+  // dead lock will happen in some case. For now, we can increase dcpmmWaitingThreshold
+  // here
   def isNeedWaitForFree(): Boolean = {
     logDebug(
       s"dcpmm wait threshold: " +

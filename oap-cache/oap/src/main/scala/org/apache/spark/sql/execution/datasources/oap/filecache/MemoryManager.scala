@@ -57,7 +57,7 @@ case class MemoryBlockHolder(
                               length: Long,
                               occupiedSize: Long,
                               source: SourceEnum.SourceEnum,
-                              fiberId: FiberId = null,
+                              obejctId: Array[Byte] = null,
                               client: PlasmaClient = null)
 
 private[sql] abstract class MemoryManager {
@@ -133,6 +133,7 @@ private[sql] object MemoryManager extends Logging {
       case "hybrid" => new HybridMemoryManager(sparkEnv)
       case "tmp" => new TmpDramMemoryManager(sparkEnv)
       case "kmem" => new DaxKmemMemoryManager(sparkEnv)
+      case "plasma" => new PlasmaMemoryManager(sparkEnv)
       case _ => throw new UnsupportedOperationException(
         s"The memory manager: ${memoryManagerOpt} is not supported now")
     }
@@ -152,7 +153,7 @@ private[sql] object MemoryManager extends Logging {
       case "guava" => apply(sparkEnv, memoryManagerOpt)
       case "noevict" => new HybridMemoryManager(sparkEnv)
       case "vmem" => new TmpDramMemoryManager(sparkEnv)
-      case "external" => new TmpDramMemoryManager(sparkEnv)
+      case "external" => new PlasmaMemoryManager(sparkEnv)
       case "mix" =>
         if (!memoryManagerOpt.equals("mix")) {
           apply(sparkEnv, memoryManagerOpt)
@@ -416,7 +417,7 @@ private[filecache] class PlasmaMemoryManager(sparkEnv: SparkEnv)
   }
 
   override private[filecache] def free(block: MemoryBlockHolder): Unit = {
-    throw new OapException("Unsupported Exception!!")
+    block.client.release(block.obejctId)
   }
 
   override def isDcpmmUsed(): Boolean = true
