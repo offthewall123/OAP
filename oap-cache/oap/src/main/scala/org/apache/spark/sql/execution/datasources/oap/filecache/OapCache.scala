@@ -911,7 +911,6 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private val externalStoreCacheSocket: String = "/tmp/plasmaStore"
   private var cacheInit: Boolean = false
   def init(): Unit = {
-    logInfo("just a test log")
     if (!cacheInit) {
       try {
         System.loadLibrary("plasma_java")
@@ -945,6 +944,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   override def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null ): FiberCache = {
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+    // TODO: may throw ObjectDuplicateException here
     val buf: ByteBuffer = plasmaClient.create(objectId, fiberLength.toInt)
     DataFiber(buf, objectId, plasmaClient)
   }
@@ -1018,7 +1018,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         cacheMissCount.addAndGet(1)
         fiberSet.add(fiberId)
         fiberCache.occupy()
-         cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+        cacheGuardian.addRemovalFiber(fiberId, fiberCache)
         fiberCache
       } else {
         val fiberCache = super.cache(fiberId)
