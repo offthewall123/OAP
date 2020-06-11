@@ -911,6 +911,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   private val externalStoreCacheSocket: String = "/tmp/plasmaStore"
   private var cacheInit: Boolean = false
   def init(): Unit = {
+    logInfo("just a test log")
     if (!cacheInit) {
       try {
         System.loadLibrary("plasma_java")
@@ -937,6 +938,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
                         client: plasma.PlasmaClient): FiberCache = {
     val fiberData = MemoryBlockHolder(null, bb.asInstanceOf[DirectBuffer].address(),
                                       bb.capacity(), bb.capacity(), SourceEnum.PM, fiberId, client)
+    assert(fiberData.client != null)
     FiberCache(FiberType.DATA, fiberData)
   }
 
@@ -1006,15 +1008,16 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
           cacheMissCount.addAndGet(1)
       }
       fiberCache.occupy()
-      cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+//      cacheGuardian.addRemovalFiber(fiberId, fiberCache)
       fiberCache
     } else {
       if (cacheReadOnlyEnbale) {
-        val fiberCache = cache(fiberId)
+        var fiberCache: FiberCache = null
+        fiberCache = cache(fiberId)
         cacheMissCount.addAndGet(1)
         fiberSet.add(fiberId)
         fiberCache.occupy()
-        cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+        //cacheGuardian.addRemovalFiber(fiberId, fiberCache)
         fiberCache
       } else {
         val fiberCache = super.cache(fiberId)
@@ -1027,21 +1030,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     val fiber = super.cache(fiberId)
 
     val objectId = hash(fiberId.toString)
-    if( !contains(fiberId)) {
-//      val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-      val plasmaClient = fiber.plasmaClient
-      plasmaClient.seal(objectId)
-      plasmaClient.release(objectId)
-//      try {
-//        val buf = plasmaClient.create(objectId, fiber.size().toInt)
-//        Platform.copyMemory(null, fiber.fiberData.baseOffset,
-//          null, buf.asInstanceOf[DirectBuffer].address(), fiber.size())
-//        plasmaClient.seal(objectId)
-//        plasmaClient.release(objectId)
-//      } catch {
-//        case e: DuplicateObjectException => logWarning(e.getMessage)
-//      }
-    }
+    fiber.fiberData.client.seal(objectId)
     fiber
   }
 
