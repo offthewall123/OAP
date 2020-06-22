@@ -520,7 +520,18 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
           val fullPath = Utils.createTempDir(initialPath + File.separator + executorId)
 
           require(fullPath.isDirectory(), "VMEMCache initialize path must be a directory")
-          val success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
+          var success = -1;
+          try {
+            success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
+          } catch {
+            case e: Exception => {
+              logWarning(s"initialize on pmem failed, fallback to initialize on disk " + s" ${e.getMessage}")
+              val path: String = "/tmp/tmpPmem"+numaId
+              val file: File = new File(path)
+              if (!file.exists()) file.mkdirs()
+              success = VMEMCacheJNI.initialize(path, 15000000);
+            }
+          }
           if (success != 0) {
             throw new SparkException("Failed to call VMEMCacheJNI.initialize")
           }
