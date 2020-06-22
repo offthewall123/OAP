@@ -524,13 +524,13 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
           try {
             success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
           } catch {
-            case e: Exception => {
-              logWarning(s"initialize on pmem failed, fallback to initialize on disk " + s" ${e.getMessage}")
-              val path: String = "/tmp/tmpPmem"+numaId
+            case e: Exception =>
+              logWarning(s"initialize on pmem failed, fallback to initialize on disk " +
+                s" ${e.getMessage}")
+              val path: String = "/tmp/tmpPmem" + numaId
               val file: File = new File(path)
               if (!file.exists()) file.mkdirs()
               success = VMEMCacheJNI.initialize(path, 15000000);
-            }
           }
           if (success != 0) {
             throw new SparkException("Failed to call VMEMCacheJNI.initialize")
