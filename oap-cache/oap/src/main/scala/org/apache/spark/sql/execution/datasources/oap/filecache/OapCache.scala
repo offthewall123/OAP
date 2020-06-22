@@ -530,7 +530,7 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
               val path: String = "/tmp/tmpPmem" + numaId
               val file: File = new File(path)
               if (!file.exists()) file.mkdirs()
-              success = VMEMCacheJNI.initialize(path, 15000000);
+              success = VMEMCacheJNI.initialize(path, vmInitialSize);
           }
           if (success != 0) {
             throw new SparkException("Failed to call VMEMCacheJNI.initialize")
