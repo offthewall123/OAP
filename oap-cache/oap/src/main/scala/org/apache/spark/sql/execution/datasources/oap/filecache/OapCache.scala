@@ -352,6 +352,7 @@ trait OapCache {
     cache
   }
 
+  // default impl will not need FiberId, external will overload this function.
   def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null): FiberCache =
     OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
 }
@@ -944,9 +945,18 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   override def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null ): FiberCache = {
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-    // TODO: may throw ObjectDuplicateException here
-    val buf: ByteBuffer = plasmaClient.create(objectId, fiberLength.toInt)
-    DataFiber(buf, objectId, plasmaClient)
+    try {
+      val buf: ByteBuffer = plasmaClient.create(objectId, fiberLength.toInt)
+      DataFiber(buf, objectId, plasmaClient)
+    }
+    catch {
+      case e: DuplicateObjectException =>
+        logWarning("plasma object duplucate" + e.getMessage + " Will get this object.")
+        // FIXME: this obj may not be sealed, get may throw exception
+        val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+        val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
+        DataFiber(buf, objectId, plasmaClient)
+    }
   }
 
   var fiberSet = scala.collection.mutable.Set[FiberId]()
@@ -1031,7 +1041,14 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     val fiber = super.cache(fiberId)
     fiber.fiberId = fiberId
     val objectId = hash(fiberId.toString)
-    fiber.fiberData.client.seal(objectId)
+    try {
+      fiber.fiberData.client.seal(objectId)
+    }
+    catch {
+      case e: PlasmaClientException =>
+        // if this object have DuplicateObjectException it will seal twice.
+        logWarning("plasma seal object error: " + e.getMessage)
+    }
     fiber
   }
 
@@ -1058,7 +1075,8 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   override def cacheStats: CacheStats = {
     val array = new Array[Long](4)
     // TODO:total size will be incorrect due to it's an external cache
-    plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).metrics(array)
+    // it will influence performance a little.
+    // plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).metrics(array)
     cacheTotalSize = new AtomicLong(array(3) + array(1))
     // Memory store and external store used size
 
