@@ -24,7 +24,10 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 
 import scala.collection.JavaConverters._
+import scala.language.postfixOps
+import scala.sys.process._
 import scala.util.Success
+import scala.util.control.Breaks._
 
 import com.google.common.cache._
 import com.google.common.hash._
@@ -520,7 +523,28 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
           val fullPath = Utils.createTempDir(initialPath + File.separator + executorId)
 
           require(fullPath.isDirectory(), "VMEMCache initialize path must be a directory")
-          val success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
+          var success = -1
+
+          breakable {
+            for ( i <- 0 until 3) {
+              logDebug("&&&&&&&&&&&&&&&&&" + i + " time to initialize");
+              success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
+              if (success == 0) break
+            }
+          }
+
+          if(success != 0) {
+            try {
+              logDebug("************initialize path..........")
+              success = VMEMCacheJNI.initialize(fullPath.getCanonicalPath, vmInitialSize);
+            } catch {
+              case e: Exception =>
+              val s = "df -h".!!
+              logDebug(s"#########################" + s)
+              logDebug(s"error when initialize on pmem" + e.getMessage)
+            }
+          }
+
           if (success != 0) {
             throw new SparkException("Failed to call VMEMCacheJNI.initialize")
           }
@@ -604,7 +628,7 @@ class VMemCache(fiberType: FiberType) extends OapCache with Logging {
     cacheEvictCount = status(0)
     cacheTotalCount = status(1)
     cacheTotalSize = status(2)
-    logDebug(s"Current status is evict:$cacheEvictCount," +
+    logInfo(s"Current status is evict:$cacheEvictCount," +
       s" count:$cacheTotalCount, size:$cacheTotalSize")
 
     if (fiberType == FiberType.INDEX) {
