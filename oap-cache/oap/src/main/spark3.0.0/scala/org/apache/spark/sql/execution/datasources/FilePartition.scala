@@ -16,13 +16,15 @@
  */
 package org.apache.spark.sql.execution.datasources
 
-import scala.collection.mutable
+import com.google.common.base.Charsets
+import com.google.common.hash.Hashing
 import scala.collection.mutable.ArrayBuffer
 
-import org.apache.spark.Partition
+import org.apache.spark.{Partition, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.read.InputPartition
+import org.apache.spark.sql.internal.oap.OapConf
 
 /**
  * A collection of file blocks that should be read as a single task
@@ -30,21 +32,24 @@ import org.apache.spark.sql.connector.read.InputPartition
  */
 case class FilePartition(index: Int, files: Array[PartitionedFile])
   extends Partition with InputPartition {
-  override def preferredLocations(): Array[String] = {
-    // Computes total number of bytes can be retrieved from each host.
-    val hostToNumBytes = mutable.HashMap.empty[String, Long]
-    files.foreach { file =>
-      file.locations.filter(_ != "localhost").foreach { host =>
-        hostToNumBytes(host) = hostToNumBytes.getOrElse(host, 0L) + file.length
-      }
+  private val conf = SparkEnv.get.conf
+  private val idToHosts: Array[String] = if (conf.get(OapConf.OAP_CLUSTER_CONSISTENTHASH_SCHEDULER_ENABLED)) {
+    val res: Array[String] = conf.get(OapConf.OAP_CLUSTER_NODE_INFO).split(";")
+    for (i <- 0 to res.length - 1) {
+      res(i) = res(i).split(":")(1)
     }
-
-    // Takes the first 3 hosts with the most data to be retrieved
-    hostToNumBytes.toSeq.sortBy {
-      case (host, numBytes) => numBytes
-    }.reverse.take(3).map {
-      case (host, numBytes) => host
-    }.toArray
+    res
+  } else {
+    null
+  }
+  override def preferredLocations(): Array[String] = {
+    var filePath: String = ""
+    for (pf <- files) {
+      filePath += pf.filePath
+    }
+    val bucket = Hashing.consistentHash(Hashing.md5().hashString(filePath, Charsets.UTF_8),
+      idToHosts.length)
+    Array(idToHosts(bucket))
   }
 }
 
