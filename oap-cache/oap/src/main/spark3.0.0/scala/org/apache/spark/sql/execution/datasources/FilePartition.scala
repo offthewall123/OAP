@@ -41,7 +41,7 @@ case class FilePartition(index: Int, files: Array[PartitionedFile])
     }
     res
   } else {
-    null
+    Array[String]()
   }
   override def preferredLocations(): Array[String] = {
     if (conf.get(OapConf.OAP_CLUSTER_CONSISTENTHASH_SCHEDULER_ENABLED)) {
