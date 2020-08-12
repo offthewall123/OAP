@@ -56,9 +56,9 @@ case class FilePartition(index: Int, files: Array[PartitionedFile])
 object FilePartition extends Logging {
 
   def getFilePartitions(
-                         sparkSession: SparkSession,
-                         partitionedFiles: Seq[PartitionedFile],
-                         maxSplitBytes: Long): Seq[FilePartition] = {
+      sparkSession: SparkSession,
+      partitionedFiles: Seq[PartitionedFile],
+      maxSplitBytes: Long): Seq[FilePartition] = {
     val partitions = new ArrayBuffer[FilePartition]
     val currentFiles = new ArrayBuffer[PartitionedFile]
     var currentSize = 0L
@@ -89,8 +89,8 @@ object FilePartition extends Logging {
   }
 
   def maxSplitBytes(
-                     sparkSession: SparkSession,
-                     selectedPartitions: Seq[PartitionDirectory]): Long = {
+      sparkSession: SparkSession,
+      selectedPartitions: Seq[PartitionDirectory]): Long = {
     val defaultMaxSplitBytes = sparkSession.sessionState.conf.filesMaxPartitionBytes
     val openCostInBytes = sparkSession.sessionState.conf.filesOpenCostInBytes
     val defaultParallelism = sparkSession.sparkContext.defaultParallelism
