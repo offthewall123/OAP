@@ -582,21 +582,16 @@ case class FileSourceScanExec(
         val filePath = file.getPath
         val isSplitable = relation.fileFormat.isSplitable(
           relation.sparkSession, relation.options, filePath)
-        if (isSplitable) {
-          PartitionedFileUtil.splitFiles(
-            sparkSession = relation.sparkSession,
-            file = file,
-            filePath = filePath,
-            isSplitable = isSplitable,
-            maxSplitBytes = maxSplitBytes,
-            partitionValues = partition.values
-          )
-        } else {
-          CachedPartitionedFileUtil.splitFilesWithCacheLocality(file, filePath, partition.values)
-        }
+        PartitionedFileUtil.splitFiles(
+          sparkSession = relation.sparkSession,
+          file = file,
+          filePath = filePath,
+          isSplitable = isSplitable,
+          maxSplitBytes = maxSplitBytes,
+          partitionValues = partition.values
+        )
       }
     }.sortBy(_.length)(implicitly[Ordering[Long]].reverse)
-
     val partitions =
       FilePartition.getFilePartitions(relation.sparkSession, splitFiles, maxSplitBytes)
 
