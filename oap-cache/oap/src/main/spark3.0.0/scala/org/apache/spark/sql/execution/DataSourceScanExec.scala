@@ -596,6 +596,7 @@ case class FileSourceScanExec(
         }
       }
     }.sortBy(_.length)(implicitly[Ordering[Long]].reverse)
+    
     val partitions =
       FilePartition.getFilePartitions(relation.sparkSession, splitFiles, maxSplitBytes)
 
