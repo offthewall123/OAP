@@ -18,6 +18,7 @@ package org.apache.spark.sql.execution.datasources
 
 import com.google.common.base.Charsets
 import com.google.common.hash.Hashing
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.{Partition, SparkEnv}
@@ -43,13 +44,30 @@ case class FilePartition(index: Int, files: Array[PartitionedFile])
     null
   }
   override def preferredLocations(): Array[String] = {
-    var filePath: String = ""
-    for (pf <- files) {
-      filePath += pf.filePath
+    if (conf.get(OapConf.OAP_CLUSTER_CONSISTENTHASH_SCHEDULER_ENABLED)) {
+      var filePath: String = ""
+      for (pf <- files) {
+        filePath += pf.filePath
+      }
+      val bucket = Hashing.consistentHash(Hashing.md5().hashString(filePath, Charsets.UTF_8),
+        idToHosts.length)
+      return Array(idToHosts(bucket))
     }
-    val bucket = Hashing.consistentHash(Hashing.md5().hashString(filePath, Charsets.UTF_8),
-      idToHosts.length)
-    Array(idToHosts(bucket))
+
+    // Computes total number of bytes can be retrieved from each host.
+    val hostToNumBytes = mutable.HashMap.empty[String, Long]
+    files.foreach { file =>
+      file.locations.filter(_ != "localhost").foreach { host =>
+        hostToNumBytes(host) = hostToNumBytes.getOrElse(host, 0L) + file.length
+      }
+    }
+
+    // Takes the first 3 hosts with the most data to be retrieved
+    hostToNumBytes.toSeq.sortBy {
+      case (host, numBytes) => numBytes
+    }.reverse.take(3).map {
+      case (host, numBytes) => host
+    }.toArray
   }
 }
 
