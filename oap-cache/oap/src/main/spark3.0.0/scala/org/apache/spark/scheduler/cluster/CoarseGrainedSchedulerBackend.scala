@@ -237,6 +237,8 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
           val data = new ExecutorData(executorRef, executorAddress, hostname,
             0, cores, logUrlHandler.applyPattern(logUrls, attributes), attributes,
             resourcesInfo, resourceProfileId)
+          val hosts = SparkEnv.get.conf.get("hosts", "")
+          SparkEnv.get.conf.set("hosts", if (hosts.length == 0) hostname else hosts + ";" + hostname)
           // This must be synchronized because variables mutated
           // in this block are read when requesting executors
           CoarseGrainedSchedulerBackend.this.synchronized {

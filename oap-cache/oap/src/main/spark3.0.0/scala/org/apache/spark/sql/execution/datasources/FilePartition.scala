@@ -35,11 +35,7 @@ case class FilePartition(index: Int, files: Array[PartitionedFile])
   extends Partition with InputPartition {
   private val conf = SparkEnv.get.conf
   private val idToHosts: Array[String] = if (conf.get(OapConf.OAP_CLUSTER_CONSISTENTHASH_SCHEDULER_ENABLED)) {
-    val res: Array[String] = conf.get(OapConf.OAP_CLUSTER_NODE_INFO).split(";")
-    for (i <- 0 to res.length - 1) {
-      res(i) = res(i).split(":")(1)
-    }
-    res
+    conf.get("hosts").split(";").distinct.sorted
   } else {
     Array[String]()
   }
@@ -47,7 +43,7 @@ case class FilePartition(index: Int, files: Array[PartitionedFile])
     if (conf.get(OapConf.OAP_CLUSTER_CONSISTENTHASH_SCHEDULER_ENABLED)) {
       var filePath: String = ""
       for (pf <- files) {
-        filePath += pf.filePath
+        filePath += pf.toString()
       }
       val bucket = Hashing.consistentHash(Hashing.md5().hashString(filePath, Charsets.UTF_8),
         idToHosts.length)
