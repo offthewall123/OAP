@@ -93,6 +93,7 @@ private[spark] class OapRpcManagerSlave(
 
   override private[spark] def stop(): Unit = {
     oapHeartbeater.shutdown()
+    rpcEnv.shutdown()
   }
 }
 
