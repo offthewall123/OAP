@@ -81,7 +81,7 @@ private[sql] class FiberCacheManager(
         OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.defaultValue.get
       )
       new MixCache(dataCacheMemorySize, indexCacheMemorySize, dataCacheGuardianMemorySize,
-        indexCacheMemorySize, seperateCache, sparkEnv)
+        indexCacheGuardianMemorySize, seperateCache, sparkEnv)
     } else {
       OapCache(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, dataCacheMemorySize,
         dataCacheGuardianMemorySize, FiberType.DATA)
