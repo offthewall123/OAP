@@ -76,12 +76,12 @@ private[sql] class FiberCacheManager(
 
     val cacheName = sparkEnv.conf.get("spark.oap.cache.strategy", DEFAULT_CACHE_STRATEGY)
     if (cacheName.equals(MIX_CACHE)) {
-      val seperateCache = sparkEnv.conf.getBoolean(
+      val separateCache = sparkEnv.conf.getBoolean(
         OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.key,
         OapConf.OAP_INDEX_DATA_SEPARATION_ENABLE.defaultValue.get
       )
       new MixCache(dataCacheMemorySize, indexCacheMemorySize, dataCacheGuardianMemorySize,
-        indexCacheGuardianMemorySize, seperateCache, sparkEnv)
+        indexCacheGuardianMemorySize, separateCache, sparkEnv)
     } else {
       OapCache(sparkEnv, OapConf.OAP_FIBERCACHE_STRATEGY, dataCacheMemorySize,
         dataCacheGuardianMemorySize, FiberType.DATA)
