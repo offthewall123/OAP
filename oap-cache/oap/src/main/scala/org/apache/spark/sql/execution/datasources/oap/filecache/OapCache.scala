@@ -233,7 +233,7 @@ private[filecache] object OapCache extends Logging {
     try {
       map = PersistentMemoryConfigUtils.parseConfig(conf)
     } catch {
-      case e: Exception =>
+      case e: OapException =>
         logWarning("cacheFallBackDetect: execption when parse config" + e)
         return false
     }
