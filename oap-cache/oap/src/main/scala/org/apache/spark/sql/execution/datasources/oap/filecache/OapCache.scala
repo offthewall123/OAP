@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Success
 
 import com.google.common.cache._
@@ -228,7 +229,14 @@ private[filecache] object OapCache extends Logging {
         return false
     }
     val executorId = executorIdStr.toInt
-    val map = PersistentMemoryConfigUtils.parseConfig(conf)
+    var map: mutable.HashMap[Int, String] = mutable.HashMap.empty
+    try {
+      map = PersistentMemoryConfigUtils.parseConfig(conf)
+    } catch {
+      case e: Exception =>
+        logWarning("cacheFallBackDetect: execption when parse config" + e)
+        return false
+    }
     if (numaId == -1) {
       logWarning(s"Executor ${executorId} is not bind with NUMA. It would be better to bind " +
         s"executor with NUMA when cache data to Intel Optane DC persistent memory.")
