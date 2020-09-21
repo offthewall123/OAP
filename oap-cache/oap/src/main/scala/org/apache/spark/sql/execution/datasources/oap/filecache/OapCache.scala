@@ -217,8 +217,7 @@ private[filecache] object OapCache extends Logging {
   def cacheFallBackDetect(sparkEnv: SparkEnv,
                           fallBackEnabled: Boolean = true,
                           fallBackRes: Boolean = true): Boolean = {
-    if (fallBackEnabled == false && fallBackRes == true) return true
-    if (fallBackEnabled == false && fallBackRes == false) return false
+    if (fallBackEnabled == false) return fallBackRes
     val conf = sparkEnv.conf
     var numaId = conf.getInt("spark.executor.numa.id", -1)
     val executorIdStr = sparkEnv.executorId
