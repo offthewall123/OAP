@@ -23,7 +23,7 @@ import org.apache.spark.sql.execution.datasources.oap.filecache.FiberType.FiberT
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.test.oap.SharedOapContext
 
-class OapCacheSuite extends SharedOapContext with Logging{
+class OapCacheSuite extends SharedOapContext with Logging {
 
   override def beforeAll(): Unit = super.beforeAll()
 

@@ -29,6 +29,7 @@ import org.apache.spark.rdd.{InputFileBlockHolder, RDD}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.QueryExecutionException
+import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.util.NextIterator
 
@@ -70,6 +71,8 @@ class FileScanRDD(
 
   private val ignoreCorruptFiles = sparkSession.sessionState.conf.ignoreCorruptFiles
   private val ignoreMissingFiles = sparkSession.sessionState.conf.ignoreMissingFiles
+
+  val sqlConf = sparkSession.sessionState.conf
 
   override def compute(split: RDDPartition, context: TaskContext): Iterator[InternalRow] = {
     val iterator = new Iterator[Object] with AutoCloseable {
@@ -227,10 +230,18 @@ class FileScanRDD(
     }
 
     // Takes the first 3 hosts with the most data to be retrieved
-    hostToNumBytes.toSeq.sortBy {
+    val hdfsPreLocs = hostToNumBytes.toSeq.sortBy {
       case (host, numBytes) => numBytes
     }.reverse.take(3).map {
       case (host, numBytes) => host
+    }
+
+    if (sqlConf.getConf(OapConf.OAP_EXTERNAL_CACHE_METADB_ENABLE) == true) {
+      CachedPartitionedFilePreferredLocs.getPreferredLocsByCache(split)
+        .++(hdfsPreLocs)
+        .take(3)
+    } else {
+      hdfsPreLocs
     }
   }
 }

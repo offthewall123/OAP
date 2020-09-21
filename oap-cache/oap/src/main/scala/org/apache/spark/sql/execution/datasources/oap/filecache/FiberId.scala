@@ -20,11 +20,12 @@ package org.apache.spark.sql.execution.datasources.oap.filecache
 import org.apache.hadoop.fs.FSDataInputStream
 import org.apache.parquet.io.SeekableInputStream
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.execution.datasources.oap.io.DataFile
 import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 
-private[oap] abstract class FiberId {
+private[oap] abstract class FiberId extends Logging{
   def toFiberKey(): String = {
     throw new UnsupportedOperationException("Unsupported operation")
   }
@@ -33,9 +34,14 @@ private[oap] abstract class FiberId {
 case class BinaryDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) extends
   DataFiberId {
 
+  // origin columnchunk's offset and length
   private var input: SeekableInputStream = _
   private var offset: Long = _
   private var length: Int = _
+
+  def getFilePath: String = file.path
+  def getOffset: Long = this.offset
+  def getLength: Long = this.length
 
   def withLoadCacheParameters(input: SeekableInputStream, offset: Long, length: Int): Unit = {
     this.input = input
@@ -131,6 +137,21 @@ case class OrcBinaryFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) e
 
 case class VectorDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) extends
   DataFiberId {
+
+  // origin columnchunk's offset and length
+  private var filePath: String = _
+  private var offset: Long = _
+  private var length: Long = _
+
+  def setProperty(filePath: String, offset: Long, length: Long): Unit = {
+    this.filePath = filePath
+    this.offset = offset
+    this.length = length
+  }
+
+  def getFilePath: String = this.filePath
+  def getOffset: Long = this.offset
+  def getLength: Long = this.length
 
   override def hashCode(): Int = (file.path + columnIndex + rowGroupId).hashCode
 

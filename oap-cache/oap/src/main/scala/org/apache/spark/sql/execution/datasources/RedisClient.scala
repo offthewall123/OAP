@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.execution.datasources
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.json4s.DefaultFormats
@@ -27,7 +28,6 @@ import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
 import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.internal.oap.OapConf
-
 
 class RedisClient extends ExternalDBClient with Logging {
 
@@ -53,9 +53,17 @@ class RedisClient extends ExternalDBClient with Logging {
       new ArrayBuffer[CacheMetaInfoValue](0)
     try {
       jedisClientInstance = redisClientPool.getResource
+      // jedisClientInstance.zrange() returns a java.util.Set
+      // if not define it or use .asInstanceOf[Set[String]]
+      // would throw exception "cannot be cast to scala.collection.immutable.Set"
+      // zrange()'s return will be cast to scala.collection.immutable.Set automatically
       // start - 1 because zrange is (start, length]
-      val cacheMetaInfoValueSet = jedisClientInstance.zrange(fileName, start - 1, length)
-      for (x <- cacheMetaInfoValueSet.asInstanceOf[Set[String]]) {
+      val cacheMetaInfoValueJavaSet: java.util.Set[String] =
+        jedisClientInstance.zrange(fileName, start - 1, length)
+      val cacheMetaInfoValueSet: scala.collection.mutable.Set[String] =
+        cacheMetaInfoValueJavaSet.asScala
+
+      for (x <- cacheMetaInfoValueSet) {
         cacheMetaInfoArrayBuffer.+=(parse(x.asInstanceOf[String]).extract[CacheMetaInfoValue])
       }
     } finally {

@@ -632,7 +632,8 @@ class ParquetCacheDataWithDictionaryWithNullsCompressedSuite extends ParquetData
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(0)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(0).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -663,7 +664,8 @@ class ParquetCacheDataWithDictionaryWithNullsCompressedSuite extends ParquetData
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(1)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(1).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -695,7 +697,8 @@ class ParquetCacheDataWithDictionaryWithNullsCompressedSuite extends ParquetData
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(2)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(2).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -728,7 +731,8 @@ class ParquetCacheDataWithDictionaryWithNullsCompressedSuite extends ParquetData
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(3)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(3).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -761,7 +765,8 @@ class ParquetCacheDataWithDictionaryWithNullsCompressedSuite extends ParquetData
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(4)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(4).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -794,7 +799,8 @@ class ParquetCacheDataWithDictionaryWithNullsCompressedSuite extends ParquetData
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(5)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(5).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -864,7 +870,8 @@ class ParquetCacheDataWithDictionaryWithoutNullsCompressedSuite extends ParquetD
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(0)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(0).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -893,7 +900,8 @@ class ParquetCacheDataWithDictionaryWithoutNullsCompressedSuite extends ParquetD
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(1)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(1).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -923,7 +931,8 @@ class ParquetCacheDataWithDictionaryWithoutNullsCompressedSuite extends ParquetD
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(2)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(2).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -954,7 +963,8 @@ class ParquetCacheDataWithDictionaryWithoutNullsCompressedSuite extends ParquetD
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(3)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(3).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -985,7 +995,8 @@ class ParquetCacheDataWithDictionaryWithoutNullsCompressedSuite extends ParquetD
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(4)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(4).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -1016,7 +1027,8 @@ class ParquetCacheDataWithDictionaryWithoutNullsCompressedSuite extends ParquetD
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(5)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, types.get(5).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -1535,7 +1547,8 @@ class ParquetFiberDataReaderSuite extends ParquetDataFileSuite {
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = parquetSchema.getColumns.get(0)
     val types: util.List[Type] = parquetSchema.asGroupType.getFields
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new SkippableVectorizedColumnReader(columnDescriptor, types.get(0).getOriginalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -1555,7 +1568,8 @@ class ParquetFiberDataReaderSuite extends ParquetDataFileSuite {
     val blockMetaData = footer.getBlocks.get(0)
     val columnDescriptor = new ColumnDescriptor(Array(s"${fileName}_temp"), INT32, 0, 0)
     val exception = intercept[IOException] {
-      reader.readFiberData(blockMetaData, columnDescriptor)
+      val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+      val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     }
     assert(exception.getMessage.contains("Can not find column meta of column"))
   }

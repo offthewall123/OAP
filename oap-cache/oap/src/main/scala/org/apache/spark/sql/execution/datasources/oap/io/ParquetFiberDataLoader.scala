@@ -44,7 +44,7 @@ private[oap] case class ParquetFiberDataLoader(
     blockId: Int) {
 
   @throws[IOException]
-  def loadSingleColumn(fiberId: FiberId = null): FiberCache = {
+  def loadSingleColumn(fiberId: FiberId = null, path: String = null): FiberCache = {
     val footer = reader.getFooter
     val fileSchema = footer.getFileMetaData.getSchema
     val fileMetadata = footer.getFileMetaData.getKeyValueMetaData
@@ -64,7 +64,8 @@ private[oap] case class ParquetFiberDataLoader(
     val columnDescriptor = requestedSchema.getColumns.get(0)
     val originalType = requestedSchema.asGroupType.getFields.get(0).getOriginalType
     val blockMetaData = footer.getBlocks.get(blockId)
-    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor)
+    val columnMeta = reader.findColumnMeta(blockMetaData, columnDescriptor)
+    val fiberData = reader.readFiberData(blockMetaData, columnDescriptor, columnMeta)
     val columnReader =
       new VectorizedColumnReader(columnDescriptor, originalType,
         fiberData.getPageReader(columnDescriptor), TimeZone.getDefault)
@@ -76,7 +77,7 @@ private[oap] case class ParquetFiberDataLoader(
       val column = new OnHeapColumnVector(rowCount, dataType)
       columnReader.readBatch(rowCount, column)
       ParquetDataFiberWriter.dumpToCache(
-        column.asInstanceOf[OnHeapColumnVector], rowCount, fiberId)
+        column.asInstanceOf[OnHeapColumnVector], rowCount, fiberId, path, columnMeta)
     }
   }
 }

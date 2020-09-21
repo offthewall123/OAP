@@ -238,6 +238,6 @@ private[oap] case class OrcDataFile(
     else {
       OrcCacheReader.putValues(rowCount, field, fromColumn, toColumn)
     }
-    ParquetDataFiberWriter.dumpToCache(toColumn, rowCount, fiber)
+    OrcDataFiberWriter.orcDumpToCache(toColumn, rowCount, fiber)
   }
 }
