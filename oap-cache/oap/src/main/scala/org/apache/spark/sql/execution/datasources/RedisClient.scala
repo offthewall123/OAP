@@ -84,8 +84,8 @@ class RedisClient extends ExternalDBClient with Logging {
           val cacheMetaInfoJson = ("offSet" -> value._offSet) ~
             ("length" -> value._length) ~
             ("host" -> value._host)
-          logInfo("upsert key: " + storeInfo._key +
-            "cacheMetaInfo is: " + compact(render(cacheMetaInfoJson)))
+          logDebug("upsert key: " + storeInfo._key +
+            "cacheMetaInfo is: " + value.toString)
           jedisClientInstance
             .zadd(storeInfo._key, value._offSet, compact(render(cacheMetaInfoJson)))
             .equals(1L)
@@ -94,6 +94,8 @@ class RedisClient extends ExternalDBClient with Logging {
           val cacheMetaInfoJson = ("offSet" -> value._offSet) ~
             ("length" -> value._length) ~
             ("host" -> value._host)
+          logDebug("evict key: " + evictInfo._key +
+            "cacheMetaInfo is: " + value.toString)
           jedisClientInstance
             .zrem(evictInfo._key.asInstanceOf[String], compact(render(cacheMetaInfoJson)))
             .equals(1L)
