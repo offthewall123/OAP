@@ -33,9 +33,14 @@ private[oap] abstract class FiberId {
 case class BinaryDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) extends
   DataFiberId {
 
+  // origin columnchunk's offset and length
   private var input: SeekableInputStream = _
   private var offset: Long = _
   private var length: Int = _
+
+  def getFilePath: String = file.path
+  def getOffset: Long = this.offset
+  def getLength: Long = this.length
 
   def withLoadCacheParameters(input: SeekableInputStream, offset: Long, length: Int): Unit = {
     this.input = input
@@ -73,7 +78,7 @@ case class BinaryDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) 
     val data = new Array[Byte](length)
     input.seek(offset)
     input.readFully(data)
-    val fiber = OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(length)
+    val fiber = OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(length, this)
     Platform.copyMemory(data,
       Platform.BYTE_ARRAY_OFFSET, null, fiber.getBaseOffset, length)
     fiber
@@ -122,7 +127,7 @@ case class OrcBinaryFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) e
       "Illegal condition when load ORCColumn Fiber to cache.")
     val data = new Array[Byte](length)
     input.readFully((offset), data, 0, data.length);
-    val fiber = OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(length)
+    val fiber = OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(length, this)
     Platform.copyMemory(data,
       Platform.BYTE_ARRAY_OFFSET, null, fiber.getBaseOffset, length)
     fiber
@@ -131,6 +136,21 @@ case class OrcBinaryFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) e
 
 case class VectorDataFiberId(file: DataFile, columnIndex: Int, rowGroupId: Int) extends
   DataFiberId {
+
+  // origin columnchunk's offset and length
+  private var filePath: String = _
+  private var offset: Long = _
+  private var length: Long = _
+
+  def setProperty(filePath: String, offset: Long, length: Long): Unit = {
+    this.filePath = filePath
+    this.offset = offset
+    this.length = length
+  }
+
+  def getFilePath: String = this.filePath
+  def getOffset: Long = this.offset
+  def getLength: Long = this.length
 
   override def hashCode(): Int = (file.path + columnIndex + rowGroupId).hashCode
 
