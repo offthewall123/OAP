@@ -546,7 +546,7 @@ object OapConf {
   }
 
   val OAP_EXTERNAL_CACHE_METADB_IMPL =
-    SqlConfAdapter.buildConf("spark.sql.oap.extrenal.cache.metaDB.impl")
+    SqlConfAdapter.buildConf("spark.sql.oap.external.cache.metaDB.impl")
       .internal()
       .doc("ExternalDB used to store cache meta info, now support Redis/Etcd")
       .stringConf
