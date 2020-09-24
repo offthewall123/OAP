@@ -552,4 +552,12 @@ object OapConf {
       .stringConf
       .createWithDefault("RedisClient")
 
+  val OAP_CACHE_PREFER_LOCATION_RUNTIME_ENABLE =
+    SqlConfAdapter.buildConf("spark.sql.oap.cache.prefer.location.runtime.enable")
+      .internal()
+      .doc("Oap schedule tasks according to cache locality," +
+      "this config is to enable/disable it at runtime")
+      .booleanConf
+      .createWithDefault(true)
+
 }

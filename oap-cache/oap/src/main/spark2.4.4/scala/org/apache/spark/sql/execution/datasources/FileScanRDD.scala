@@ -235,6 +235,12 @@ class FileScanRDD(
     }.reverse.take(3).map {
       case (host, numBytes) => host
     }
+    if (SparkSession.getActiveSession.get
+      .conf.get(OapConf.OAP_CACHE_PREFER_LOCATION_RUNTIME_ENABLE) == false) {
+      logInfo("OAP cache preferred location is disabled at runtime " +
+        "will fall back to hdfs preferred location")
+      return hdfsPreLocs
+    }
 
     if (sqlConf.getConf(OapConf.OAP_EXTERNAL_CACHE_METADB_ENABLE) == true) {
       CachedPartitionedFilePreferredLocs.getPreferredLocsByCache(split)
