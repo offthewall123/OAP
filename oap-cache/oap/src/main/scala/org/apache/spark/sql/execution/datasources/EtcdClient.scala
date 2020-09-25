@@ -20,11 +20,13 @@ package org.apache.spark.sql.execution.datasources
 import java.nio.charset.Charset
 
 import scala.collection.mutable.ArrayBuffer
+
 import io.etcd.jetcd.{ByteSequence, Client, KV}
 import io.etcd.jetcd.options.GetOption
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+
 import org.apache.spark.SparkEnv
 import org.apache.spark.sql.internal.oap.OapConf
 
