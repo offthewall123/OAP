@@ -41,7 +41,7 @@ object CachedPartitionedFilePreferredLocs {
       if (cacheMetaInfoValueArr.size > 0) {
         // host<-> cachedBytes
         cacheMetaInfoValueArr.foreach(x => {
-          hostToCachedBytes.put(x._host, hostToCachedBytes.getOrElse(x._host, 0L) + x._length)
+          hostToCachedBytes.put(x.host, hostToCachedBytes.getOrElse(x.host, 0L) + x.length)
         })
       }
     }

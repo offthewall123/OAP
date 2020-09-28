@@ -1042,27 +1042,10 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
 
   def reportCacheMeta(fiberId: FiberId): Unit = {
     fiberId match {
-      case binary: BinaryDataFiberId =>
-        // TODO code refactor
-        val cacheMetaInfoValue: CacheMetaInfoValue = new CacheMetaInfoValue(
-          SparkEnv.get.blockManager.blockManagerId.host,
-          fiberId.asInstanceOf[BinaryDataFiberId].getOffset,
-          fiberId.asInstanceOf[BinaryDataFiberId].getLength)
-        val storeCacheMetaInfo = new StoreCacheMetaInfo(
-          fiberId.asInstanceOf[BinaryDataFiberId].getFilePath,
-          cacheMetaInfoValue)
-        // report cache locality info to redis/etcd
-        externalDBClient.upsert(storeCacheMetaInfo)
-      case vectorData: VectorDataFiberId =>
-        val cacheMetaInfoValue: CacheMetaInfoValue = new CacheMetaInfoValue(
-          SparkEnv.get.blockManager.blockManagerId.host,
-          fiberId.asInstanceOf[VectorDataFiberId].getOffset,
-          fiberId.asInstanceOf[VectorDataFiberId].getLength)
-        val storeCacheMetaInfo = new StoreCacheMetaInfo(
-          fiberId.asInstanceOf[VectorDataFiberId].getFilePath,
-          cacheMetaInfoValue)
-        // report cache locality info to redis/etcd
-        externalDBClient.upsert(storeCacheMetaInfo)
+      case binary: BinaryDataFiberId => binary
+        .doReport(SparkEnv.get.blockManager.blockManagerId.host, externalDBClient)
+      case vectorData: VectorDataFiberId => vectorData
+        .doReport(SparkEnv.get.blockManager.blockManagerId.host, externalDBClient)
     }
   }
 

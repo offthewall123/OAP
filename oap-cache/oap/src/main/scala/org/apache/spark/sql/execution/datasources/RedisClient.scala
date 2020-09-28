@@ -21,7 +21,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 import org.json4s.DefaultFormats
-import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
 
@@ -74,44 +73,25 @@ class RedisClient extends ExternalDBClient with Logging {
     cacheMetaInfoArrayBuffer
   }
 
-  override def upsert(cacheMetaInfo: CacheMetaInfo): Boolean = {
+  override def upsert(cacheMetaInfo: CacheMetaInfo): Unit = {
     var jedisClientInstance: Jedis = null
     try {
       jedisClientInstance = redisClientPool.getResource
       cacheMetaInfo match {
-        case storeInfo: StoreCacheMetaInfo =>
-          val value = storeInfo._value
-          val cacheMetaInfoJson = ("offSet" -> value._offSet) ~
-            ("length" -> value._length) ~
-            ("host" -> value._host)
-          logDebug("upsert key: " + storeInfo._key +
-            "cacheMetaInfo is: " + value.toString)
-          jedisClientInstance
-            .zadd(storeInfo._key, value._offSet, compact(render(cacheMetaInfoJson)))
-            .equals(1L)
-        case evictInfo: EvictCacheMetaInfo =>
-          val value = evictInfo._value
-          val cacheMetaInfoJson = ("offSet" -> value._offSet) ~
-            ("length" -> value._length) ~
-            ("host" -> value._host)
-          logDebug("evict key: " + evictInfo._key +
-            "cacheMetaInfo is: " + value.toString)
-          jedisClientInstance
-            .zrem(evictInfo._key.asInstanceOf[String], compact(render(cacheMetaInfoJson)))
-            .equals(1L)
+        case storeInfo: StoreCacheMetaInfo => storeInfo.doUpsert(jedisClientInstance)
+        case evictInfo: EvictCacheMetaInfo => evictInfo.doUpsert(jedisClientInstance)
       }
     } finally {
       if (null != jedisClientInstance) {
         jedisClientInstance.close()
       }
     }
-    false
   }
 
   override def stop(): Unit = {
     if (null != redisClientPool) {
       redisClientPool.destroy()
-      logWarning("Redis client pool closed.")
+      logDebug("Redis client pool closed.")
     }
   }
 }

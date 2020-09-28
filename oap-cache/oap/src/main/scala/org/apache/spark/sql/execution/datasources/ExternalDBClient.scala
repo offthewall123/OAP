@@ -27,7 +27,7 @@ trait ExternalDBClient {
 
   def get(fileName: String, start: Long, length: Long): ArrayBuffer[CacheMetaInfoValue]
 
-  def upsert(cacheMetaInfo: CacheMetaInfo): Boolean
+  def upsert(cacheMetaInfo: CacheMetaInfo): Unit
 
   def stop(): Unit
 
