@@ -1046,6 +1046,10 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         .doReport(SparkEnv.get.blockManager.blockManagerId.host, externalDBClient)
       case vectorData: VectorDataFiberId => vectorData
         .doReport(SparkEnv.get.blockManager.blockManagerId.host, externalDBClient)
+      case bitMapData: BitmapFiberId =>
+        logWarning("Index cache is not support to report cache to external DB.")
+      case bTreeData: BTreeFiberId =>
+        logWarning("Index cache is not support to report cache to external DB.")
     }
   }
 
