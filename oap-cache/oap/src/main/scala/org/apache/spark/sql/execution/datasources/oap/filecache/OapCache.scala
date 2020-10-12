@@ -25,6 +25,8 @@ import java.util.concurrent.locks.{Condition, ReentrantLock}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.language.postfixOps
+import scala.sys.process._
 import scala.util.Success
 
 import com.google.common.cache._
@@ -213,7 +215,16 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 }
 
 private[filecache] object OapCache extends Logging {
-  val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
+//  val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
+  def plasmaServerDetect(): Boolean = {
+    val command = "ps -ef" #| "grep plasma"
+    val plasmaServerStatus = command.!!
+    if (plasmaServerStatus.indexOf("plasma-store-server") == -1) {
+      logWarning("Plasma Store Server is not available, will fallback to simpleCache")
+      return false
+    }
+    true
+  }
   def cacheFallBackDetect(sparkEnv: SparkEnv,
                           fallBackEnabled: Boolean = true,
                           fallBackRes: Boolean = true): Boolean = {
@@ -273,29 +284,38 @@ private[filecache] object OapCache extends Logging {
       "true").toLowerCase
     val fallBackRes = conf.get(OapConf.OAP_TEST_CACHE_BACKEND_FALLBACK_RES.key,
       "true").toLowerCase
-    if (PMemRelatedCacheBackend.contains(oapCacheOpt)) {
-      if (!cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean)) {
-        if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
-          return new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+
+    oapCacheOpt match {
+      case "external" =>
+        if (plasmaServerDetect()) new ExternalCache(fiberType)
+        else new SimpleOapCache()
+      case "guava" =>
+        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean))
+          {
+            new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+          }
+        else {
+          if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap"))
+            {
+              new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+            }
+          else new SimpleOapCache()
         }
-        logWarning(s"There is no Optane PMem DIMMs detected," +
-          s"has to fall back to simple cache implementation")
-        new SimpleOapCache()
-      }
-      else {
-        oapCacheOpt match {
-          case "guava" => new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
-          case "vmem" => new VMemCache(fiberType)
-          case "noevict" => new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
-          case "external" => new ExternalCache(fiberType)
-          case _ => throw new UnsupportedOperationException(
-            s"The cache backend: ${oapCacheOpt} is not supported now")
-        }
-      }
-    }
-    else {
-      throw new UnsupportedOperationException(
-        s"The cache backend: ${oapCacheOpt} is not supported now")
+      case "noevict" =>
+        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean))
+          {
+            new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
+          }
+        else new SimpleOapCache()
+      case "vmem" =>
+        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean))
+          {
+            new VMemCache(fiberType)
+          }
+        else new SimpleOapCache()
+      case _ =>
+        throw new UnsupportedOperationException(
+          s"The cache backend: ${oapCacheOpt} is not supported now")
     }
   }
 }

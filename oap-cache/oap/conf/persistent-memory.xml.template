@@ -24,6 +24,6 @@
     <initialPath>path to initial path</initialPath>
   </numanode>
   <numanode id="1">
-    <initialPath>path to initial path</initialPath>
+    <initialPath>/mnt/pmem</initialPath>
   </numanode>
 </persistentMemoryPool>
