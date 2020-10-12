@@ -31,6 +31,7 @@ import org.apache.spark.internal.config.ConfigEntry
 import org.apache.spark.memory.MemoryMode
 import org.apache.spark.sql.execution.datasources.OapException
 import org.apache.spark.sql.execution.datasources.oap.filecache.FiberType.FiberType
+import org.apache.spark.sql.execution.datasources.oap.filecache.OapCache.plasmaServerDetect
 import org.apache.spark.sql.execution.datasources.oap.utils.PersistentMemoryConfigUtils
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.storage.{BlockManager, TestBlockId}
@@ -133,7 +134,12 @@ private[sql] object MemoryManager extends Logging {
       case "hybrid" => new HybridMemoryManager(sparkEnv)
       case "tmp" => new TmpDramMemoryManager(sparkEnv)
       case "kmem" => new DaxKmemMemoryManager(sparkEnv)
-      case "plasma" => new PlasmaMemoryManager(sparkEnv)
+      case "plasma" =>
+        if (plasmaServerDetect()) {
+          new PlasmaMemoryManager(sparkEnv)
+        } else {
+          new OffHeapMemoryManager(sparkEnv)
+        }
       case _ => throw new UnsupportedOperationException(
         s"The memory manager: ${memoryManagerOpt} is not supported now")
     }
@@ -153,7 +159,12 @@ private[sql] object MemoryManager extends Logging {
       case "guava" => apply(sparkEnv, memoryManagerOpt)
       case "noevict" => new HybridMemoryManager(sparkEnv)
       case "vmem" => new TmpDramMemoryManager(sparkEnv)
-      case "external" => new PlasmaMemoryManager(sparkEnv)
+      case "external" =>
+        if (plasmaServerDetect()) {
+          new PlasmaMemoryManager(sparkEnv)
+        } else {
+          new OffHeapMemoryManager(sparkEnv)
+        }
       case "mix" =>
         if (!memoryManagerOpt.equals("mix")) {
           apply(sparkEnv, memoryManagerOpt)
