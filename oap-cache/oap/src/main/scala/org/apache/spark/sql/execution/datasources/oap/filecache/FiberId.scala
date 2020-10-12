@@ -20,13 +20,12 @@ package org.apache.spark.sql.execution.datasources.oap.filecache
 import org.apache.hadoop.fs.FSDataInputStream
 import org.apache.parquet.io.SeekableInputStream
 
-import org.apache.spark.internal.Logging
 import org.apache.spark.sql.execution.datasources.{CacheMetaInfoValue, ExternalDBClient, StoreCacheMetaInfo}
 import org.apache.spark.sql.execution.datasources.oap.io.DataFile
 import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.unsafe.Platform
 
-private[oap] abstract class FiberId extends Logging{
+private[oap] abstract class FiberId {
   def toFiberKey(): String = {
     throw new UnsupportedOperationException("Unsupported operation")
   }
