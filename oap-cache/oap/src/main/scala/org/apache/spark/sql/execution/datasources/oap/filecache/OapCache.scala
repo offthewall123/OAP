@@ -289,28 +289,24 @@ private[filecache] object OapCache extends Logging {
         if (plasmaServerDetect()) new ExternalCache(fiberType)
         else new SimpleOapCache()
       case "guava" =>
-        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean))
-          {
+        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean)) {
+          new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
+        }
+        else {
+          if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap")) {
             new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
           }
-        else {
-          if (oapCacheOpt.equals("guava") && memoryManagerOpt.equals("offheap"))
-            {
-              new GuavaOapCache(cacheMemory, cacheGuardianMemory, fiberType)
-            }
           else new SimpleOapCache()
         }
       case "noevict" =>
-        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean))
-          {
-            new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
-          }
+        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean)) {
+          new NoEvictPMCache(cacheMemory, cacheGuardianMemory, fiberType)
+        }
         else new SimpleOapCache()
       case "vmem" =>
-        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean))
-          {
-            new VMemCache(fiberType)
-          }
+        if (cacheFallBackDetect(sparkEnv, fallBackEnabled.toBoolean, fallBackRes.toBoolean)) {
+          new VMemCache(fiberType)
+        }
         else new SimpleOapCache()
       case _ =>
         throw new UnsupportedOperationException(
