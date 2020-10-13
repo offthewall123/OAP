@@ -46,15 +46,15 @@ object ParquetDataFiberWriter extends Logging {
                   path: String = null, mc: ColumnChunkMetaData = null): FiberCache = {
     val header = ParquetDataFiberHeader(column, total)
     logDebug(s"will dump column to data fiber dataType = ${column.dataType()}, " +
-      s"total = $total, header is $header")
+      s"total = $total, header is $header")3
+    if (fiberId != null) {
+      fiberId.asInstanceOf[VectorDataFiberId]
+        .setProperty(path, mc.getStartingPos, mc.getTotalSize)
+    }
     header match {
       case ParquetDataFiberHeader(true, false, 0) =>
         val length = fiberLength(column, total, 0 )
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        if (fiberId != null) {
-          fiberId.asInstanceOf[VectorDataFiberId]
-            .setProperty(path, mc.getStartingPos, mc.getTotalSize)
-        }
         val fiber = emptyDataFiber(length)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress = header.writeToCache(fiber.getBaseOffset)
@@ -66,10 +66,6 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(true, false, dicLength) =>
         val length = fiberLength(column, total, 0, dicLength)
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        if (fiberId != null) {
-          fiberId.asInstanceOf[VectorDataFiberId]
-            .setProperty(path, mc.getStartingPos, mc.getTotalSize)
-        }
         val fiber = emptyDataFiber(length)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress = header.writeToCache(fiber.getBaseOffset)
@@ -81,10 +77,6 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(false, true, _) =>
         logDebug(s"will apply ${ParquetDataFiberHeader.defaultSize} " +
           s"bytes off heap memory for data fiber.")
-        if (fiberId != null) {
-          fiberId.asInstanceOf[VectorDataFiberId]
-            .setProperty(path, mc.getStartingPos, mc.getTotalSize)
-        }
         val fiber = emptyDataFiber(ParquetDataFiberHeader.defaultSize)
         if (!fiber.isFailedMemoryBlock()) {
           header.writeToCache(fiber.getBaseOffset)
@@ -95,10 +87,6 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(false, false, 0) =>
         val length = fiberLength(column, total, 1)
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        if (fiberId != null) {
-          fiberId.asInstanceOf[VectorDataFiberId]
-            .setProperty(path, mc.getStartingPos, mc.getTotalSize)
-        }
         val fiber = emptyDataFiber(length)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress =
@@ -111,10 +99,6 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(false, false, dicLength) =>
         val length = fiberLength(column, total, 1, dicLength)
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        if (fiberId != null) {
-          fiberId.asInstanceOf[VectorDataFiberId]
-            .setProperty(path, mc.getStartingPos, mc.getTotalSize)
-        }
         val fiber = emptyDataFiber(length)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress =

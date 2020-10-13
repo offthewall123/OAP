@@ -17,29 +17,48 @@
 
 package org.apache.spark.sql.execution.datasources
 
-abstract class CacheMetaInfo(key: String, value: CacheMetaInfoValue) {
-  val _key = key
-  val _value = value
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
+import redis.clients.jedis.Jedis
+
+import org.apache.spark.internal.Logging
+
+abstract class CacheMetaInfo(key: String, value: CacheMetaInfoValue)
+  extends Logging {
 }
 
-class CacheMetaInfoValue(host: String, offSet: Long, length: Long) {
-  var _host: String = host
-  var _offSet: Long = offSet
-  var _length: Long = length
-
+case class CacheMetaInfoValue(host: String, offSet: Long, length: Long) {
   override def toString: String = {
-    "host: " + _host + ", offset: " + _offSet + ", length: " + _length + "."
+    "host: " + host + ", offset: " + offSet + ", length: " + length + "."
   }
 }
 
-class StoreCacheMetaInfo(key: String, value: CacheMetaInfoValue)
+case class StoreCacheMetaInfo(key: String, value: CacheMetaInfoValue)
   extends CacheMetaInfo(key, value) {
-  override val _key: String = key
-  override val _value: CacheMetaInfoValue = value
+
+  def doUpsert(jedisClientInstance: Jedis): Unit = {
+    val cacheMetaInfoJson = ("offSet" -> value.offSet) ~
+      ("length" -> value.length) ~
+      ("host" -> value.host)
+    // TODO remove this log, it's user confidential
+    logDebug("upsert key: " + key +
+      "cacheMetaInfo is: " + value.toString)
+    jedisClientInstance
+      .zadd(key, value.offSet, compact(render(cacheMetaInfoJson)))
+  }
 }
 
-class EvictCacheMetaInfo(key: String, value: CacheMetaInfoValue)
+case class EvictCacheMetaInfo(key: String, value: CacheMetaInfoValue)
   extends CacheMetaInfo(key, value) {
-  override val _key: String = key
-  override val _value: CacheMetaInfoValue = value
+
+  def doUpsert(jedisClientInstance: Jedis): Unit = {
+    val cacheMetaInfoJson = ("offSet" -> value.offSet) ~
+      ("length" -> value.length) ~
+      ("host" -> value.host)
+    // TODO remove this log, it's user confidential
+    logDebug("evict key: " + key +
+      "cacheMetaInfo is: " + value.toString)
+    jedisClientInstance
+      .zrem(key, compact(render(cacheMetaInfoJson)))
+  }
 }
