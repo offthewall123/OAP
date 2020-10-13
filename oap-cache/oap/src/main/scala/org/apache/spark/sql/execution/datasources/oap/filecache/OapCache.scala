@@ -215,7 +215,6 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 }
 
 private[filecache] object OapCache extends Logging {
-//  val PMemRelatedCacheBackend = Array("guava", "vmem", "noevict", "external")
   def plasmaServerDetect(): Boolean = {
     val command = "ps -ef" #| "grep plasma"
     val plasmaServerStatus = command.!!
