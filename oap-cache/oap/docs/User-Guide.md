@@ -417,6 +417,7 @@ When all the queries are done, you will see the `result.json` file in the curren
 - [Cache Hot Tables](#Cache-Hot-Tables)  Data Source Cache also supports caching specific tables according to actual situations, these tables are usually hot tables.
 - [Column Vector Cache](#Column-Vector-Cache)  This document above use **binary** cache as example, if your cluster memory resources is abundant enough, you can choose ColumnVector data cache instead of binary cache to spare computation time.
 - [Disable Cache in Runtime](#Disable-Cache-in-Runtime) Data Source Cache also supports disabling Cache in Runtime.
+- [Large Scale and Heterogeneous cluster support](#Large Scale and Heterogeneous cluster support)
 ### Additional Cache Strategies
 
 Following table shows features of 4 cache strategies on PMem.
@@ -715,3 +716,14 @@ spark.sql("SELECT column_B FROM table_B")
 spark.sql("SET spark.sql.oap.cache.enabled=true")
 spark.sql("SELECT column_C FROM table_C")
 ```
+
+### Large Scale and Heterogeneous cluster support
+To support heterogeneous cluster(some nodes with Optane™ DC Persistent Memory, some without), we introduce an external DB to store cache meta info. Now support [Redis]("https://redis.io/"). Users need to [launch a redis-server]("https://www.runoob.com/redis/redis-install.html").
+
+Add following configuration to `spark-defaults.conf`.
+```
+spark.sql.oap.external.cache.metaDB.enable             true
+spark.sql.oap.external.cache.metaDB.address            10.1.2.12
+spark.sql.oap.external.cache.metaDB.impl               org.apache.spark.sql.execution.datasources.RedisClient
+```
+
