@@ -219,7 +219,8 @@ private[filecache] object OapCache extends Logging {
     val command = "ps -ef" #| "grep plasma"
     val plasmaServerStatus = command.!!
     if (plasmaServerStatus.indexOf("plasma-store-server") == -1) {
-      logWarning("Plasma Store Server is not available, will fallback to simpleCache")
+      logWarning("External cache strategy requires plasma-store-server launched, " +
+        "failed to detect plasma-store-server, will fallback to simpleCache.")
       return false
     }
     true
