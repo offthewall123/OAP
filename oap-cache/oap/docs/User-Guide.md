@@ -718,12 +718,17 @@ spark.sql("SELECT column_C FROM table_C")
 ```
 
 ### Large Scale and Heterogeneous cluster support
-To support large scale cluster and heterogeneous cluster(some nodes with Optane™ DC Persistent Memory, some without), we introduce an external DB to store cache meta info. Now support [Redis]("https://redis.io/"). Users need to [download and launch a redis-server]("https://redis.io/download").
-External DB stores cache's locality info, it will influence spark to schedule tasks according to cache locality. If there's no cache available, spark will fallback to schedule respecting HDFS locality.
+***NOTE:*** Only works with `external cache`
 
-Add following configuration to `spark-defaults.conf`.
+OAP influences Spark to schedule tasks according cache locality info. These info could be of large amount in a ***large scale cluster*** and how to schedule tasks in a ***heterogeneous cluster*** (some nodes with Optane™ DC Persistent Memory, some without) could also be challenging.
+
+We introduce an external DB to store cache locality info. If there's no cache available, spark will fallback to schedule respecting HDFS locality.
+Currently we support [Redis]("https://redis.io/") as external DB service. Please [download and launch a redis-server]("https://redis.io/download") berfore running spark with OAP.
+
+Please add following configuration to `spark-defaults.conf`.
 ```
 spark.sql.oap.external.cache.metaDB.enable             true
+# Redis-server address
 spark.sql.oap.external.cache.metaDB.address            10.1.2.12
 spark.sql.oap.external.cache.metaDB.impl               org.apache.spark.sql.execution.datasources.RedisClient
 ```
