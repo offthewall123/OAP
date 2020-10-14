@@ -19,6 +19,7 @@ package org.apache.spark.sql.execution.datasources.oap.filecache
 
 import org.apache.hadoop.fs.FSDataInputStream
 import org.apache.parquet.io.SeekableInputStream
+
 import org.apache.spark.sql.execution.datasources.{CacheMetaInfoValue, ExternalDBClient, StoreCacheMetaInfo}
 import org.apache.spark.sql.execution.datasources.oap.io.DataFile
 import org.apache.spark.sql.oap.OapRuntime
