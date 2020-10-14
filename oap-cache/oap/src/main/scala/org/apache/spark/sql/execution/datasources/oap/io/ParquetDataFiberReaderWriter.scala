@@ -46,7 +46,7 @@ object ParquetDataFiberWriter extends Logging {
                   path: String = null, mc: ColumnChunkMetaData = null): FiberCache = {
     val header = ParquetDataFiberHeader(column, total)
     logDebug(s"will dump column to data fiber dataType = ${column.dataType()}, " +
-      s"total = $total, header is $header")3
+      s"total = $total, header is $header")
     if (fiberId != null) {
       fiberId.asInstanceOf[VectorDataFiberId]
         .setProperty(path, mc.getStartingPos, mc.getTotalSize)
