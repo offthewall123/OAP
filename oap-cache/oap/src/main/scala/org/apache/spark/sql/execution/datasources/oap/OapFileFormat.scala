@@ -181,7 +181,7 @@ private[sql] class OapFileFormat extends FileFormat
             case DataFileVersion.OAP_DATAFILE_V1 =>
               val reader = new OapDataReaderV1(file.filePath, m, partitionSchema, requiredSchema,
                 filterScanners, requiredIds, None, oapMetrics, conf, false, options,
-                filters, None)
+                filters, None, null)
               reader.read(file)
             // Actually it shouldn't get to this line, because unsupported version will cause
             // exception thrown in readVersion call

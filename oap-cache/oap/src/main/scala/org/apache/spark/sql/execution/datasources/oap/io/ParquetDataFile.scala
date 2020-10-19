@@ -18,15 +18,13 @@
 package org.apache.spark.sql.execution.datasources.oap.io
 
 import scala.collection.JavaConverters._
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.util.StringUtils
 import org.apache.parquet.hadoop._
-
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
-import org.apache.spark.sql.execution.datasources.RecordReader
+import org.apache.spark.sql.execution.datasources.{PartitionedFile, RecordReader}
 import org.apache.spark.sql.execution.datasources.oap.filecache._
 import org.apache.spark.sql.execution.datasources.parquet.ParquetReadSupportWrapper
 import org.apache.spark.sql.internal.oap.OapConf
@@ -67,6 +65,7 @@ private[oap] case class ParquetDataFile(
     configuration: Configuration) extends DataFile {
 
   private var context: Option[ParquetVectorizedContext] = None
+  private var partitionedFile: PartitionedFile = null
   private lazy val meta =
     OapRuntime.getOrCreate.dataFileMetaCacheManager.get(this).asInstanceOf[ParquetDataFileMeta]
   private val file = new Path(StringUtils.unEscapeString(path))
@@ -118,7 +117,7 @@ private[oap] case class ParquetDataFile(
           addRequestSchemaToConf(configuration, requiredIds)
           initCacheReader(requiredIds, c,
             new VectorizedCacheReader(configuration,
-              meta.footer.toParquetMetadata(), this, requiredIds))
+              meta.footer.toParquetMetadata(), this, requiredIds), partitionedFile)
         } else {
           addRequestSchemaToConf(configuration, requiredIds)
           initVectorizedReader(c,
@@ -169,6 +168,9 @@ private[oap] case class ParquetDataFile(
 
   def setParquetVectorizedContext(context: Option[ParquetVectorizedContext]): Unit =
     this.context = context
+
+  def setPartitionedFile(file: PartitionedFile): Unit =
+    this.partitionedFile = file
 
   private def initRecordReader(reader: RecordReader[UnsafeRow]) = {
     reader.initialize()

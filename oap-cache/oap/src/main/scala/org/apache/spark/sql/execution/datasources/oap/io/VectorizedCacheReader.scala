@@ -32,19 +32,20 @@ import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.memory.MemoryMode
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.execution.datasources.RecordReader
+import org.apache.spark.sql.execution.datasources.{PartitionedFile, RecordReader}
 import org.apache.spark.sql.execution.datasources.oap.filecache.{FiberCache, FiberId, VectorDataFiberId}
 import org.apache.spark.sql.execution.datasources.parquet.ParquetReadSupportWrapper
 import org.apache.spark.sql.execution.vectorized._
 import org.apache.spark.sql.oap.OapRuntime
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.vectorized.{ColumnarBatch, ColumnVector}
+import org.apache.spark.sql.vectorized.{ColumnVector, ColumnarBatch}
 
 class VectorizedCacheReader(
     configuration: Configuration,
     footer: ParquetMetadata,
     dataFile: ParquetDataFile,
-    requiredColumnIds: Array[Int])
+    requiredColumnIds: Array[Int],
+    file: PartitionedFile = null)
   extends RecordReader[AnyRef] with Logging {
 
   protected val defaultCapacity: Int =
@@ -226,10 +227,29 @@ class VectorizedCacheReader(
       configuration.get(ParquetReadSupportWrapper.SPARK_ROW_REQUESTED_SCHEMA)
     this.sparkSchema = StructType.fromString(sparkRequestedSchemaString)
     val rowGroupMetas = footer.getBlocks.asScala
-    this.rowGroupMetaIter = rowGroupMetas.iterator
+    if (file == null) {
+      this.rowGroupMetaIter = rowGroupMetas.iterator
+      for (block <- rowGroupMetas) {
+        this.totalRowCount += block.getRowCount
+      }
+      return
+    }
+
+    var rowGourpList = List[BlockMetaData]()
+    var currentOffset : Long = 0
+    // refer parquet file format: https://github.com/apache/parquet-format#file-format
+    val PARQUET_MAGIC_NUMBER = 4
+    currentOffset += PARQUET_MAGIC_NUMBER
+    // if a split file include a row group's head, this reader will read this row group.
     for (block <- rowGroupMetas) {
       this.totalRowCount += block.getRowCount
+      if (file.start <= currentOffset && file.start + file.length >= currentOffset) {
+        rowGourpList +:= block
+        this.totalRowCount += block.getRowCount
+      }
+      currentOffset += block.getTotalByteSize
     }
+    this.rowGroupMetaIter = rowGourpList.iterator
   }
 
   protected def initializeInternal(): Unit = {
