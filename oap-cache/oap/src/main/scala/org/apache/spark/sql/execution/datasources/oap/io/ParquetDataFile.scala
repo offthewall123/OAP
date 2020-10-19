@@ -117,7 +117,7 @@ private[oap] case class ParquetDataFile(
           addRequestSchemaToConf(configuration, requiredIds)
           initCacheReader(requiredIds, c,
             new VectorizedCacheReader(configuration,
-              meta.footer.toParquetMetadata(), this, requiredIds), partitionedFile)
+              meta.footer.toParquetMetadata(), this, requiredIds, partitionedFile))
         } else {
           addRequestSchemaToConf(configuration, requiredIds)
           initVectorizedReader(c,
