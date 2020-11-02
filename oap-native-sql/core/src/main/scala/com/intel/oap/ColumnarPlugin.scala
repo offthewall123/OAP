@@ -39,49 +39,6 @@ case class ColumnarPreOverrides(conf: SparkConf) extends Rule[SparkPlan] {
       plan: SparkPlan,
       nc: Seq[SparkPlan] = null,
       parent: SparkPlan = null): SparkPlan = plan match {
-    case plan: BatchScanExec =>
-      logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
-      new ColumnarBatchScanExec(plan.output, plan.scan)
-    case plan: ProjectExec =>
-      if (!columnarConf.enablePreferColumnar) {
-        val (doConvert, child) = optimizeJoin(0, plan)
-        if (doConvert) {
-          return child
-        }
-      }
-      //new ColumnarProjectExec(plan.projectList, replaceWithColumnarPlan(plan.child))
-      val columnarPlan =
-        if (nc == null) replaceWithColumnarPlan(plan.child, parent = plan) else nc(0)
-      logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
-      var newPlan: SparkPlan = null
-      try {
-        // If some expression is not supported, we will use RowBased HashAggr here.
-        val newColumnarPlan = if (columnarPlan.isInstanceOf[ColumnarConditionProjectExec]) {
-          val cur_plan = columnarPlan.asInstanceOf[ColumnarConditionProjectExec]
-          new ColumnarConditionProjectExec(cur_plan.condition, plan.projectList, cur_plan.child)
-        } else {
-          new ColumnarConditionProjectExec(null, plan.projectList, columnarPlan)
-        }
-        newPlan = newColumnarPlan
-      } catch {
-        case e: UnsupportedOperationException =>
-          System.out.println(s"Fall back to use RowBased Filter and Project Exec")
-      }
-      if (newPlan == null) {
-        if (columnarPlan.isInstanceOf[ColumnarConditionProjectExec]) {
-          val planBeforeFilter = columnarPlan.children.map(replaceWithColumnarPlan(_))
-          plan.child.withNewChildren(planBeforeFilter)
-        } else {
-          plan.withNewChildren(List(columnarPlan))
-        }
-      } else {
-        newPlan
-      }
-    case plan: FilterExec =>
-      val child =
-        if (nc == null) replaceWithColumnarPlan(plan.child) else nc(0)
-      logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
-      new ColumnarConditionProjectExec(plan.condition, null, child)
     case plan: HashAggregateExec =>
       val children = Seq(if (nc == null) replaceWithColumnarPlan(plan.child) else nc(0))
       logDebug(s"Columnar Processing for ${plan.getClass} is currently supported.")
