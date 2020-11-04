@@ -440,21 +440,21 @@ public final class ArrowWritableColumnVector extends WritableColumnVector {
   @Override
   public void putNull(int rowId) {
     numNulls += 1;
-    writer.setNull(rowId);
     if (nulls != null) {
       nulls[rowId] = (byte)1;
     }
+    writer.setNull(rowId);
   }
 
   @Override
   public void putNulls(int rowId, int count) {
     numNulls += count;
-    writer.setNulls(rowId, count);
     if (nulls != null) {
       for (int i = 0; i < count; i++) {
         nulls[rowId + i] = (byte)1;
       }
     }
+    writer.setNulls(rowId, count);
   }
 
   @Override
@@ -1806,6 +1806,12 @@ public final class ArrowWritableColumnVector extends WritableColumnVector {
     @Override
     final void setNull(int rowId) {
       writer.setNull(rowId);
+    }
+
+    final void setNulls(int rowId, int count) {
+      for (int i = 0; i < count; i++) {
+        writer.setNull(rowId + i);
+      }
     }
   }
 
