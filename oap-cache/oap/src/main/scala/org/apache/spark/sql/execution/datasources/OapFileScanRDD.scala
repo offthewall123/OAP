@@ -63,7 +63,8 @@ case class FilePartition(index: Int, files: Array[PartitionedFile]) extends RDDP
 /**
  * An RDD that scans a list of file partitions.
  */
-class FileScanRDD(
+
+class OapFileScanRDD(
     @transient private val sparkSession: SparkSession,
     readFunction: (PartitionedFile) => Iterator[InternalRow],
     @transient val filePartitions: Seq[FilePartition])

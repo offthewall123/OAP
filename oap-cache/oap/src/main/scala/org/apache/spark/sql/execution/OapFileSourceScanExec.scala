@@ -303,7 +303,7 @@ case class OapFileSourceScanExec(
       FilePartition(bucketId, prunedFilesGroupedToBuckets.getOrElse(bucketId, Array.empty))
     }
 
-    new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
+    new OapFileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
   }
 
   /**
@@ -367,7 +367,7 @@ case class OapFileSourceScanExec(
     }
     closePartition()
 
-    new FileScanRDD(fsRelation.sparkSession, readFile, partitions)
+    new OapFileScanRDD(fsRelation.sparkSession, readFile, partitions)
   }
 
   private def getBlockLocations(file: FileStatus): Array[BlockLocation] = file match {
