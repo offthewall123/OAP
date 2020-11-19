@@ -65,7 +65,7 @@ case class FiberCache(fiberType: FiberType.FiberType, fiberData: MemoryBlockHold
   }
 
   def isFailedMemoryBlock(): Boolean = {
-    fiberData.length == 0
+    null == fiberData || fiberData.length == 0
   }
 
   def setOriginByteArray(bytes: Array[Byte]): Unit = {

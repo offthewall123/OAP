@@ -1001,10 +1001,8 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       case e: DuplicateObjectException =>
         // TODO: what if hash conllisions?
         logWarning("plasma object duplicate " + e.getMessage + " Will get this object.")
-        // FIXME: this obj may not be sealed, get may throw exception
-        val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-        val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
-        ExternalDataFiber(buf, objectId, plasmaClient)
+        // multi threads has conflicts creating one object, return a null fiber
+        FiberCache(FiberType.DATA, null)
     }
   }
 
