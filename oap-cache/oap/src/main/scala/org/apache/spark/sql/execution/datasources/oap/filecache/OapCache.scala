@@ -64,6 +64,9 @@ private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends Cache
     removalPendingQueues(i) = new LinkedBlockingQueue[(FiberId, FiberCache)]()
   val roundRobin = new AtomicInteger(0)
 
+  // Tell if guardian thread is trying to remove one Fiber.
+  @volatile private var bRemoving: Boolean = false
+
   override def pendingFiberCount: Int = {
     var sum = 0
     removalPendingQueues.foreach(sum += _.size())
@@ -102,6 +105,7 @@ private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends Cache
   }
 
   private def releaseFiberCache(cache: FiberCache): Unit = {
+    bRemoving = true
     val fiberId = cache.fiberId
     logDebug(s"Removing fiber: $fiberId")
     // Block if fiber is in use.
@@ -116,10 +120,22 @@ private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends Cache
       }
     } else {
       _pendingFiberSize.addAndGet(-cache.size())
-      _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
+
       // TODO: Make log more readable
       logDebug(s"Fiber removed successfully. Fiber: $fiberId")
+      if (waitNotifyActive) {
+        this.getGuardianLock().lock()
+        _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
+        if (_pendingFiberCapacity.get() <
+          OapRuntime.getOrCreate.fiberCacheManager.dcpmmWaitingThreshold) {
+          guardianLockCond.signalAll()
+        }
+        this.getGuardianLock().unlock()
+      } else {
+        _pendingFiberCapacity.addAndGet(-cache.getOccupiedSize())
+      }
     }
+    bRemoving = false
   }
 }
 
@@ -133,10 +149,10 @@ private[filecache] class CacheGuardian(maxMemory: Long) extends Thread with Logg
 
   private val removalPendingQueue = new LinkedBlockingQueue[(FiberId, FiberCache)]()
 
-  private val guardianLock = new ReentrantLock()
-  private val guardianLockCond = guardianLock.newCondition()
+  protected val guardianLock = new ReentrantLock()
+  protected val guardianLockCond = guardianLock.newCondition()
 
-  private var waitNotifyActive: Boolean = false
+  protected var waitNotifyActive: Boolean = false
 
   // Tell if guardian thread is trying to remove one Fiber.
   @volatile private var bRemoving: Boolean = false
