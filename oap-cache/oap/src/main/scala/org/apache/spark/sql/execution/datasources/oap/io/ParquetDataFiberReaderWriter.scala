@@ -55,7 +55,7 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(true, false, 0) =>
         val length = fiberLength(column, total, 0 )
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        val fiber = emptyDataFiber(length)
+        val fiber = emptyDataFiber(length, fiberId)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress = header.writeToCache(fiber.getBaseOffset)
           dumpDataToFiber(nativeAddress, column, total)
@@ -66,7 +66,7 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(true, false, dicLength) =>
         val length = fiberLength(column, total, 0, dicLength)
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        val fiber = emptyDataFiber(length)
+        val fiber = emptyDataFiber(length, fiberId)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress = header.writeToCache(fiber.getBaseOffset)
           dumpDataAndDicToFiber(nativeAddress, column, total, dicLength)
@@ -77,7 +77,7 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(false, true, _) =>
         logDebug(s"will apply ${ParquetDataFiberHeader.defaultSize} " +
           s"bytes off heap memory for data fiber.")
-        val fiber = emptyDataFiber(ParquetDataFiberHeader.defaultSize)
+        val fiber = emptyDataFiber(ParquetDataFiberHeader.defaultSize, fiberId)
         if (!fiber.isFailedMemoryBlock()) {
           header.writeToCache(fiber.getBaseOffset)
         } else {
@@ -87,7 +87,7 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(false, false, 0) =>
         val length = fiberLength(column, total, 1)
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        val fiber = emptyDataFiber(length)
+        val fiber = emptyDataFiber(length, fiberId)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress =
             dumpNullsToFiber(header.writeToCache(fiber.getBaseOffset), column, total)
@@ -99,7 +99,7 @@ object ParquetDataFiberWriter extends Logging {
       case ParquetDataFiberHeader(false, false, dicLength) =>
         val length = fiberLength(column, total, 1, dicLength)
         logDebug(s"will apply $length bytes off heap memory for data fiber.")
-        val fiber = emptyDataFiber(length)
+        val fiber = emptyDataFiber(length, fiberId)
         if (!fiber.isFailedMemoryBlock()) {
           val nativeAddress =
             dumpNullsToFiber(header.writeToCache(fiber.getBaseOffset), column, total)
@@ -311,8 +311,8 @@ object ParquetDataFiberWriter extends Logging {
     case other => throw new OapException(s"$other data type is not implemented for cache.")
   }
 
-  private def emptyDataFiber(fiberLength: Long): FiberCache =
-    OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength)
+  private def emptyDataFiber(fiberLength: Long, fiberId: FiberId = null): FiberCache =
+    OapRuntime.getOrCreate.fiberCacheManager.getEmptyDataFiberCache(fiberLength, fiberId)
 }
 
 /**
