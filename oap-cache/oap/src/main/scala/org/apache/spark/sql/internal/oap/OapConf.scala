@@ -580,7 +580,7 @@ object OapConf {
       .createWithDefault("")
 
   val OAP_EXTERNAL_CACHE_CLIENT_POOL_SIZE =
-    SqlConfAdapter.buildConf("spark.executor.sql.oap.cache.external.client.pool.sizzze")
+    SqlConfAdapter.buildConf("spark.executor.sql.oap.cache.external.client.pool.size")
       .internal()
       .doc("client pool for external cache")
       .intConf
