@@ -70,8 +70,8 @@ object ParquetDataFiberCompressedWriter extends Logging {
   /**
    * Write nulls data to data fiber.
    */
-  private def dumpNullsToFiber(
-                                nativeAddress: Long, column: OapOnHeapColumnVector, total: Int): Long = {
+  private def dumpNullsToFiber(nativeAddress: Long,
+                               column: OapOnHeapColumnVector, total: Int): Long = {
     Platform.copyMemory(column.getNulls,
       Platform.BYTE_ARRAY_OFFSET, null, nativeAddress, total)
     nativeAddress + total

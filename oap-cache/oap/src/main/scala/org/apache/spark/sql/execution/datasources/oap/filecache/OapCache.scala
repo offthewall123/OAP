@@ -990,7 +990,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     FiberCache(FiberType.DATA, fiberData)
   }
 
-  override def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null ): FiberCache = {
+  override def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null): FiberCache = {
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
     try {
@@ -1000,11 +1000,11 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     catch {
       case e: DuplicateObjectException =>
         // TODO: what if hash conllisions?
-        logWarning("plasma object duplicate " + e.getMessage + " Will get this object.")
-        // FIXME: this obj may not be sealed, get may throw exception
-        val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-        val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
-        ExternalDataFiber(buf, objectId, plasmaClient)
+        logWarning("plasma object duplicate " +
+          e.getMessage + " another thread is operating this object.")
+        // multi threads has conflicts creating one object, return a null fiber
+        FiberCache(FiberType.DATA, MemoryBlockHolder(
+          null, 0L, 0L, 0L, SourceEnum.DRAM))
     }
   }
 
@@ -1086,7 +1086,9 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         cacheMissCount.addAndGet(1)
         fiberSet.add(fiberId)
         fiberCache.occupy()
-        cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+        if (!fiberCache.isFailedMemoryBlock()) {
+          cacheGuardian.addRemovalFiber(fiberId, fiberCache)
+        }
         fiberCache
       } else {
         val fiberCache = super.cache(fiberId)
@@ -1110,6 +1112,9 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
 
   override def cache(fiberId: FiberId): FiberCache = {
     val fiber = super.cache(fiberId)
+    if (fiber.isFailedMemoryBlock()) {
+      return fiber;
+    }
     fiber.fiberId = fiberId
     val objectId = hash(fiberId.toString)
     try {
@@ -1119,6 +1124,9 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       case e: PlasmaClientException =>
         // if this object have DuplicateObjectException it will seal twice.
         logWarning("plasma seal object error: " + e.getMessage)
+    }
+    if (SparkEnv.get.conf.get(OapConf.OAP_EXTERNAL_CACHE_METADB_ENABLED) == true) {
+      reportCacheMeta(fiberId)
     }
     fiber
   }
@@ -1145,9 +1153,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   override def cacheStats: CacheStats = {
     val array = new Array[Long](4)
     // TODO:total size will be incorrect due to it's an external cache
-    // it will influence performance a little.
-    // plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).metrics(array)
-    cacheTotalSize = new AtomicLong(0)
+    // These parts of codes will be called periodically with 2 to 4 seconds of an interval,
+    // and it will not affect the performance a lot
+    plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).metrics(array)
+    // metrics() api returns (0) share_mem_total (1) share_mem_used
+    // (2) external_total (3) external_used
+    cacheTotalSize = new AtomicLong(array(3) + array(1))
+    // Memory store and external store used size
 
     if (fiberType == FiberType.INDEX) {
       CacheStats(

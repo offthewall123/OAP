@@ -134,7 +134,12 @@ private[sql] object MemoryManager extends Logging {
       case "hybrid" => new HybridMemoryManager(sparkEnv)
       case "tmp" => new TmpDramMemoryManager(sparkEnv)
       case "kmem" => new DaxKmemMemoryManager(sparkEnv)
-      case "plasma" => new PlasmaMemoryManager(sparkEnv)
+      case "plasma" =>
+        if (plasmaServerDetect()) {
+          new PlasmaMemoryManager(sparkEnv)
+        } else {
+          new OffHeapMemoryManager(sparkEnv)
+        }
       case _ => throw new UnsupportedOperationException(
         s"The memory manager: ${memoryManagerOpt} is not supported now")
     }
