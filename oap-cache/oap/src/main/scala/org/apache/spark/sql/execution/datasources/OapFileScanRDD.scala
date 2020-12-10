@@ -238,9 +238,13 @@ class OapFileScanRDD(
     }
 
     if (sqlConf.getConf(OapConf.OAP_EXTERNAL_CACHE_METADB_ENABLED) == true) {
-      CachedPartitionedFilePreferredLocs.getPreferredLocsByCache(split)
-        .++(hdfsPreLocs)
+      val cachePreLocs = CachedPartitionedFilePreferredLocs.getPreferredLocsByCache(split)
         .take(3)
+      if (cachePreLocs.length != 0) {
+        cachePreLocs
+      } else {
+        hdfsPreLocs
+      }
     } else {
       hdfsPreLocs
     }
