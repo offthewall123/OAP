@@ -1009,23 +1009,9 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       ExternalDataFiber(buf, objectId, plasmaClient)
     }
     catch {
-      case ie: InterruptedException =>
-        logWarning("plasma create InterruptedException " + ie.getMessage)
-        FiberCache(FiberType.DATA, MemoryBlockHolder(
-          null, 0L, 0L, 0L, SourceEnum.DRAM))
-      case ee: ExecutionException =>
-        logWarning("plasma create ExecutionException " + ee.getMessage)
-        FiberCache(FiberType.DATA, MemoryBlockHolder(
-          null, 0L, 0L, 0L, SourceEnum.DRAM))
-      case te: TimeoutException =>
-        logWarning("plasma create TimeoutException " + te.getMessage)
-        FiberCache(FiberType.DATA, MemoryBlockHolder(
-          null, 0L, 0L, 0L, SourceEnum.DRAM))
-      case de: DuplicateObjectException =>
-        // TODO: what if hash conllisions?
-        logWarning("plasma object duplicate " +
-          de.getMessage + " another thread is operating this object.")
-        // multi threads has conflicts creating one object, return a null fiber
+      case e @ (_: InterruptedException | _: ExecutionException |
+                _: TimeoutException | _: DuplicateObjectException) =>
+        logWarning("plasma create execption " +  e.getClass.getName + " message: " + e.getMessage)
         FiberCache(FiberType.DATA, MemoryBlockHolder(
           null, 0L, 0L, 0L, SourceEnum.DRAM))
     }
@@ -1082,12 +1068,8 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     try {
       PlasmaTimeOutWrapper.run("delete", plasmaClient, executorService, paramValue, timeOutInSeconds)
     } catch {
-      case ie: InterruptedException =>
-        logWarning("plasma delete InterruptedException " + ie.getMessage)
-      case ee: ExecutionException =>
-        logWarning("plasma delete ExecutionException " + ee.getMessage)
-      case te: TimeoutException =>
-        logWarning("plasma delete TimeoutException " + te.getMessage)
+      case e @ (_: InterruptedException | _: ExecutionException | _: TimeoutException) =>
+        logWarning("plasma delete execption " +  e.getClass.getName + " message: " + e.getMessage)
     }
   }
 
@@ -1103,14 +1085,8 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       res = PlasmaTimeOutWrapper.run("contains", plasmaClient,
               executorService, paramValue, timeOutInSeconds).asInstanceOf[Boolean]
     } catch {
-      case ie: InterruptedException =>
-        logWarning("plasma contains InterruptedException " + ie.getMessage)
-        res = false
-      case ee: ExecutionException =>
-        logWarning("plasma contains ExecutionException " + ee.getMessage)
-        res = false
-      case te: TimeoutException =>
-        logWarning("plasma contains TimeoutException " + te.getMessage)
+      case e @ (_: InterruptedException | _: ExecutionException | _: TimeoutException) =>
+        logWarning("plasma contains execption " +  e.getClass.getName + " message: " + e.getMessage)
         res = false
     }
     res
@@ -1137,14 +1113,10 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         fiberCache = ExternalDataFiber(buf, objectId, plasmaClient)
       }
       catch {
-        case ie: InterruptedException =>
-          logWarning("plasma getObjAsByteBuffer InterruptedException " + ie.getMessage)
-        case ee: ExecutionException =>
-          logWarning("plasma getObjAsByteBuffer ExecutionException " + ee.getMessage)
-        case te: TimeoutException =>
-          logWarning("plasma getObjAsByteBuffer TimeoutException " + te.getMessage)
-        case getException : plasma.exceptions.PlasmaGetException =>
-          logWarning("plasma getObjAsByteBuffer PlasmaGetException: " + getException.getMessage)
+        case e @ (_: InterruptedException | _: ExecutionException |
+                  _: TimeoutException | _: PlasmaGetException) =>
+          logWarning("plasma getObjAsByteBuffer execption " +
+            e.getClass.getName + " message: " + e.getMessage)
           fiberCache = cache(fiberId)
           cacheMissCount.addAndGet(1)
       }
@@ -1198,15 +1170,9 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       PlasmaTimeOutWrapper.run("seal", plasmaClient, executorService, paramValue, timeOutInSeconds)
     }
     catch {
-      case e: PlasmaClientException =>
-        // if this object have DuplicateObjectException it will seal twice.
-        logWarning("plasma seal object error: " + e.getMessage)
-      case ie: InterruptedException =>
-        logWarning("plasma seal InterruptedException " + ie.getMessage)
-      case ee: ExecutionException =>
-        logWarning("plasma seal ExecutionException " + ee.getMessage)
-      case te: TimeoutException =>
-        logWarning("plasma seal TimeoutException " + te.getMessage)
+      case e @ (_: InterruptedException | _: ExecutionException |
+                _: TimeoutException | _: PlasmaClientException) =>
+        logWarning("plasma seal execption " +  e.getClass.getName + " message: " + e.getMessage)
     }
     if (SparkEnv.get.conf.get(OapConf.OAP_EXTERNAL_CACHE_METADB_ENABLED) == true) {
       reportCacheMeta(fiberId)
