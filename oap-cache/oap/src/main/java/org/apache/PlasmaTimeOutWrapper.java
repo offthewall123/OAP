@@ -17,36 +17,38 @@ public class PlasmaTimeOutWrapper implements Callable<Object> {
   private PlasmaClient plasmaClient;
   private ExecutorService executorService;
   private Object[] paramValues;
-  private long timeOut;
+  private long timeOutInSeconds;
 
   private PlasmaTimeOutWrapper() {
   }
 
-  public static Object run(String methodName,
-                           PlasmaClient plasmaClient,
-                           ExecutorService executorService,
-                           Object[] paramValues, long timeOut)
+  public static Object run(
+          String methodName,
+          PlasmaClient plasmaClient,
+          ExecutorService executorService,
+          Object[] paramValues, long timeOutInSeconds)
           throws InterruptedException, ExecutionException, TimeoutException,
           DuplicateObjectException, PlasmaGetException, PlasmaClientException {
     PlasmaTimeOutWrapper plasmaTimeOutWrapper = new PlasmaTimeOutWrapper();
     return plasmaTimeOutWrapper.submitFutureTask(methodName, plasmaClient,
-            executorService, paramValues, timeOut);
+            executorService, paramValues, timeOutInSeconds);
   }
 
-  public Object submitFutureTask(String methodName,
-                                 PlasmaClient plasmaClient,
-                                 ExecutorService executorService,
-                                 Object[] paramValues, long timeOut)
+  public Object submitFutureTask(
+          String methodName,
+          PlasmaClient plasmaClient,
+          ExecutorService executorService,
+          Object[] paramValues, long timeOutInSeconds)
           throws InterruptedException, ExecutionException, TimeoutException,
           DuplicateObjectException, PlasmaGetException, PlasmaClientException {
     this.methodName = methodName;
     this.plasmaClient = plasmaClient;
     this.executorService = executorService;
     this.paramValues = paramValues;
-    this.timeOut = timeOut;
+    this.timeOutInSeconds = timeOutInSeconds;
     FutureTask<Object> futureTask = (FutureTask<Object>) executorService.submit(this);
     executorService.execute(futureTask);
-    return futureTask.get(timeOut, TimeUnit.SECONDS);
+    return futureTask.get(timeOutInSeconds, TimeUnit.SECONDS);
   }
 
   @Override
