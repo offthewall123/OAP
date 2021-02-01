@@ -21,7 +21,7 @@ import java.io.File
 import java.nio.{ByteBuffer, DirectByteBuffer}
 import java.util
 import java.util.Collections
-import java.util.concurrent.{ConcurrentHashMap, Executors, LinkedBlockingQueue}
+import java.util.concurrent.{Callable, ConcurrentHashMap, ExecutionException, Executor, Executors, FutureTask, LinkedBlockingQueue, TimeoutException}
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.function.Consumer
@@ -35,6 +35,7 @@ import scala.util.Success
 import com.google.common.cache._
 import com.google.common.hash._
 import com.intel.oap.common.unsafe.VMEMCacheJNI
+import org.apache.PlasmaTimeOutWrapper
 import org.apache.arrow.plasma
 import org.apache.arrow.plasma.exceptions.{DuplicateObjectException, PlasmaClientException}
 import sun.nio.ch.DirectBuffer
@@ -994,17 +995,34 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   }
 
   override def getEmptyFiber(fiberLength: Long, fiberId: FiberId = null): FiberCache = {
+    val length: Int = fiberLength.toInt
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+    val paramValue = new Array[Object](2)
+    paramValue(0) = objectId
+    paramValue(1) = length.asInstanceOf[Object]
     try {
-      val buf: ByteBuffer = plasmaClient.create(objectId, fiberLength.toInt)
+      val buf: ByteBuffer = PlasmaTimeOutWrapper.run("create", plasmaClient, executorService, paramValue, 3)
+          .asInstanceOf[ByteBuffer]
       ExternalDataFiber(buf, objectId, plasmaClient)
     }
     catch {
-      case e: DuplicateObjectException =>
+      case ie: InterruptedException =>
+        logWarning("plasma create InterruptedException " + ie.getMessage)
+        FiberCache(FiberType.DATA, MemoryBlockHolder(
+          null, 0L, 0L, 0L, SourceEnum.DRAM))
+      case ee: ExecutionException =>
+        logWarning("plasma create ExecutionException " + ee.getMessage)
+        FiberCache(FiberType.DATA, MemoryBlockHolder(
+          null, 0L, 0L, 0L, SourceEnum.DRAM))
+      case te: TimeoutException =>
+        logWarning("plasma create TimeoutException " + te.getMessage)
+        FiberCache(FiberType.DATA, MemoryBlockHolder(
+          null, 0L, 0L, 0L, SourceEnum.DRAM))
+      case de: DuplicateObjectException =>
         // TODO: what if hash conllisions?
         logWarning("plasma object duplicate " +
-          e.getMessage + " another thread is operating this object.")
+          de.getMessage + " another thread is operating this object.")
         // multi threads has conflicts creating one object, return a null fiber
         FiberCache(FiberType.DATA, MemoryBlockHolder(
           null, 0L, 0L, 0L, SourceEnum.DRAM))
@@ -1025,7 +1043,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       conf.get(OapConf.OAP_EXTERNAL_CACHE_CLIENT_POOL_SIZE_BK)
     }
   val clientRoundRobin = new AtomicInteger(0)
-  val plasmaClientPool = new Array[ plasma.PlasmaClient](clientPoolSize)
+  val plasmaClientPool = new Array[plasma.PlasmaClient](clientPoolSize)
   for ( i <- 0 until clientPoolSize) {
     try {
       plasmaClientPool(i) = new plasma.PlasmaClient(externalStoreCacheSocket, "", 0)
@@ -1034,6 +1052,8 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
         logError(s"Error occurred when connecting to plasma server" + e.getMessage)
     }
   }
+
+  val executorService = Executors.newCachedThreadPool
 
   val cacheGuardian = new MultiThreadCacheGuardian(Int.MaxValue)
   cacheGuardian.start()
@@ -1052,30 +1072,72 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
 
   def delete(fiberId: FiberId): Unit = {
     val objectId = hash(fiberId.toString)
-    plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).delete(objectId)
+    val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+    val paramValue = new Array[Object](1)
+    paramValue(0) = objectId
+    // TODO make timeout configable
+    try {
+      PlasmaTimeOutWrapper.run("delete", plasmaClient, executorService, paramValue, 3)
+    } catch {
+      case ie: InterruptedException =>
+        logWarning("plasma delete InterruptedException " + ie.getMessage)
+      case ee: ExecutionException =>
+        logWarning("plasma delete ExecutionException " + ee.getMessage)
+      case te: TimeoutException =>
+        logWarning("plasma delete TimeoutException " + te.getMessage)
+    }
   }
 
   def contains(fiberId: FiberId): Boolean = {
     val objectId = hash(fiberId.toString)
-    if (plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize).contains(objectId)) true
-    else false
+    val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+    val paramValue = new Array[Object](1)
+    paramValue(0) = objectId
+    var res: Boolean = false
+    try {
+      res = PlasmaTimeOutWrapper.run("contains", plasmaClient, executorService, paramValue, 3)
+              .asInstanceOf[Boolean]
+    } catch {
+      case ie: InterruptedException =>
+        logWarning("plasma contains InterruptedException " + ie.getMessage)
+        res = false
+      case ee: ExecutionException =>
+        logWarning("plasma contains ExecutionException " + ee.getMessage)
+        res = false
+      case te: TimeoutException =>
+        logWarning("plasma contains TimeoutException " + te.getMessage)
+        res = false
+    }
+    res
   }
 
   override def get(fiberId: FiberId): FiberCache = {
     logDebug(s"external cache get FiberId is ${fiberId}")
     val objectId = hash(fiberId.toString)
+    val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
+    val paramValue = new Array[Object](3)
+    paramValue(0) = objectId
+    paramValue(1) = (-1).asInstanceOf[Object]
+    paramValue(2) = (false).asInstanceOf[Object]
     if(contains(fiberId)) {
       var fiberCache : FiberCache = null
       try{
         logDebug(s"Cache hit, get from external cache.")
-        val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-        val buf: ByteBuffer = plasmaClient.getObjAsByteBuffer(objectId, -1, false)
+        val buf: ByteBuffer = PlasmaTimeOutWrapper.run("getObjAsByteBuffer",
+          plasmaClient, executorService, paramValue, 3)
+          .asInstanceOf[ByteBuffer]
         cacheHitCount.addAndGet(1)
         fiberCache = ExternalDataFiber(buf, objectId, plasmaClient)
       }
       catch {
+        case ie: InterruptedException =>
+          logWarning("plasma getObjAsByteBuffer InterruptedException " + ie.getMessage)
+        case ee: ExecutionException =>
+          logWarning("plasma getObjAsByteBuffer ExecutionException " + ee.getMessage)
+        case te: TimeoutException =>
+          logWarning("plasma getObjAsByteBuffer TimeoutException " + te.getMessage)
         case getException : plasma.exceptions.PlasmaGetException =>
-          logWarning("Get exception: " + getException.getMessage)
+          logWarning("plasma getObjAsByteBuffer PlasmaGetException: " + getException.getMessage)
           fiberCache = cache(fiberId)
           cacheMissCount.addAndGet(1)
       }
@@ -1120,13 +1182,22 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     }
     fiber.fiberId = fiberId
     val objectId = hash(fiberId.toString)
+    val plasmaClient = fiber.fiberData.client
+    val paramValue = new Array[Object](1)
+    paramValue(0) = objectId
     try {
-      fiber.fiberData.client.seal(objectId)
+      PlasmaTimeOutWrapper.run("seal", plasmaClient, executorService, paramValue, 3)
     }
     catch {
       case e: PlasmaClientException =>
         // if this object have DuplicateObjectException it will seal twice.
         logWarning("plasma seal object error: " + e.getMessage)
+      case ie: InterruptedException =>
+        logWarning("plasma seal InterruptedException " + ie.getMessage)
+      case ee: ExecutionException =>
+        logWarning("plasma seal ExecutionException " + ee.getMessage)
+      case te: TimeoutException =>
+        logWarning("plasma seal TimeoutException " + te.getMessage)
     }
     if (SparkEnv.get.conf.get(OapConf.OAP_EXTERNAL_CACHE_METADB_ENABLED) == true) {
       reportCacheMeta(fiberId)
