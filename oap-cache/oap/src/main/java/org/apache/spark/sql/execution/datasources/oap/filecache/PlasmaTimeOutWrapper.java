@@ -1,7 +1,8 @@
-package org.apache.plasma.wrapper;
+package org.apache.spark.sql.execution.datasources.oap.filecache;
 
 import java.util.concurrent.*;
 
+import org.apache.arrow.plasma.PlasmaClient;
 import org.apache.arrow.plasma.exceptions.DuplicateObjectException;
 import org.apache.arrow.plasma.exceptions.PlasmaClientException;
 import org.apache.arrow.plasma.exceptions.PlasmaGetException;
@@ -15,26 +16,31 @@ public class PlasmaTimeOutWrapper implements Callable<Object> {
   private Object[] paramValues;
   private long timeOutInSeconds;
   private PlasmaLambdaWrapper wrapper;
+  private PlasmaClient client;
 
   private PlasmaTimeOutWrapper() {
   }
 
-  public static Object run (
+  public static Object run(
           PlasmaLambdaWrapper wrapper,
+          PlasmaClient client,
           ExecutorService executorService,
           Object[] paramValues, long timeOutInSeconds)
           throws InterruptedException, ExecutionException, TimeoutException,
           DuplicateObjectException, PlasmaGetException, PlasmaClientException {
     PlasmaTimeOutWrapper plasmaTimeOutWrapper = new PlasmaTimeOutWrapper();
-    return plasmaTimeOutWrapper.submitFutureTask(wrapper,executorService, paramValues, timeOutInSeconds);
+    return plasmaTimeOutWrapper
+            .submitFutureTask(wrapper, client, executorService, paramValues, timeOutInSeconds);
   }
 
   private Object submitFutureTask(
           PlasmaLambdaWrapper wrapper,
+          PlasmaClient client,
           ExecutorService executorService,
           Object[] paramValues, long timeOutInSeconds)
           throws InterruptedException, ExecutionException, TimeoutException,
           DuplicateObjectException, PlasmaGetException, PlasmaClientException {
+    this.client = client;
     this.wrapper = wrapper;
     this.executorService = executorService;
     this.paramValues = paramValues;
@@ -46,6 +52,6 @@ public class PlasmaTimeOutWrapper implements Callable<Object> {
 
   @Override
   public Object call() {
-    return wrapper.execute(paramValues);
+    return wrapper.execute(client, paramValues);
   }
 }

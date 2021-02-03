@@ -35,10 +35,8 @@ import scala.util.Success
 import com.google.common.cache._
 import com.google.common.hash._
 import com.intel.oap.common.unsafe.VMEMCacheJNI
-import org.apache.plasma.wrapper._
 import org.apache.arrow.plasma
 import org.apache.arrow.plasma.exceptions.{DuplicateObjectException, PlasmaClientException, PlasmaGetException}
-import org.apache.plasma.wrapper.PlasmaTimeOutWrapper
 import sun.nio.ch.DirectBuffer
 
 import org.apache.spark.{SparkEnv, SparkException}
@@ -49,7 +47,6 @@ import org.apache.spark.sql.execution.datasources.oap.filecache.FiberType.FiberT
 import org.apache.spark.sql.execution.datasources.oap.utils.PersistentMemoryConfigUtils
 import org.apache.spark.sql.internal.oap.OapConf
 import org.apache.spark.sql.oap.OapRuntime
-import org.apache.spark.unsafe.Platform
 import org.apache.spark.util.Utils
 
 private[filecache] class MultiThreadCacheGuardian(maxMemory: Long) extends CacheGuardian(maxMemory)
@@ -999,15 +996,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     val length: Int = fiberLength.toInt
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-    val paramValue = new Array[Object](3)
-    paramValue(0) = plasmaClient
-    paramValue(1) = objectId
-    paramValue(2) = length.asInstanceOf[Object]
-    val plasmaCreate = new PlasmaCreate
+    val paramValue = new Array[Object](2)
+    paramValue(0) = objectId
+    paramValue(1) = length.asInstanceOf[Object]
     val timeOutInSeconds = conf.get(OapConf.OAP_EXTERNAL_CACHE_TIMEOUT_INSECONDS)
 
     try {
-      val buf: ByteBuffer = PlasmaTimeOutWrapper.run(plasmaCreate,
+      val buf: ByteBuffer = PlasmaTimeOutWrapper.run(new PlasmaCreate, plasmaClient,
         executorService, paramValue, timeOutInSeconds).asInstanceOf[ByteBuffer]
       ExternalDataFiber(buf, objectId, plasmaClient)
     }
@@ -1064,13 +1059,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   def delete(fiberId: FiberId): Unit = {
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-    val paramValue = new Array[Object](2)
-    paramValue(0) = plasmaClient
-    paramValue(1) = objectId
+    val paramValue = new Array[Object](1)
+    paramValue(0) = objectId
     // TODO make timeout configable
     val timeOutInSeconds = conf.get(OapConf.OAP_EXTERNAL_CACHE_TIMEOUT_INSECONDS)
     try {
-      PlasmaTimeOutWrapper.run(new PlasmaDelete(), executorService, paramValue, timeOutInSeconds)
+      PlasmaTimeOutWrapper
+        .run(new PlasmaDelete(), plasmaClient, executorService, paramValue, timeOutInSeconds)
     } catch {
       case e @ (_: InterruptedException | _: ExecutionException | _: TimeoutException) =>
         logWarning("plasma delete execption " +  e.getClass.getName + " message: " + e.getMessage)
@@ -1080,14 +1075,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
   def contains(fiberId: FiberId): Boolean = {
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-    val paramValue = new Array[Object](2)
-    paramValue(0) = plasmaClient
-    paramValue(1) = objectId
+    val paramValue = new Array[Object](1)
+    paramValue(0) = objectId
     var res: Boolean = false
     val timeOutInSeconds = conf.get(OapConf.OAP_EXTERNAL_CACHE_TIMEOUT_INSECONDS)
 
     try {
-      res = PlasmaTimeOutWrapper.run(new PlasmaContains(),
+      res = PlasmaTimeOutWrapper.run(new PlasmaContains(), plasmaClient,
               executorService, paramValue, timeOutInSeconds).asInstanceOf[Boolean]
     } catch {
       case e @ (_: InterruptedException | _: ExecutionException | _: TimeoutException) =>
@@ -1101,11 +1095,10 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     logDebug(s"external cache get FiberId is ${fiberId}")
     val objectId = hash(fiberId.toString)
     val plasmaClient = plasmaClientPool(clientRoundRobin.getAndAdd(1) % clientPoolSize)
-    val paramValue = new Array[Object](4)
-    paramValue(0) = plasmaClient
-    paramValue(1) = objectId
-    paramValue(2) = (-1).asInstanceOf[Object]
-    paramValue(3) = (false).asInstanceOf[Object]
+    val paramValue = new Array[Object](3)
+    paramValue(0) = objectId
+    paramValue(1) = (-1).asInstanceOf[Object]
+    paramValue(2) = (false).asInstanceOf[Object]
     val timeOutInSeconds = conf.get(OapConf.OAP_EXTERNAL_CACHE_TIMEOUT_INSECONDS)
 
     if(contains(fiberId)) {
@@ -1113,7 +1106,7 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
       try{
         logDebug(s"Cache hit, get from external cache.")
         val buf: ByteBuffer = PlasmaTimeOutWrapper
-          .run(new PlasmaGetObjAsByteBuffer(), executorService, paramValue, timeOutInSeconds)
+          .run(new PlasmaGetObjAsByteBuffer(), plasmaClient, executorService, paramValue, timeOutInSeconds)
           .asInstanceOf[ByteBuffer]
         cacheHitCount.addAndGet(1)
         fiberCache = ExternalDataFiber(buf, objectId, plasmaClient)
@@ -1168,13 +1161,13 @@ class ExternalCache(fiberType: FiberType) extends OapCache with Logging {
     fiber.fiberId = fiberId
     val objectId = hash(fiberId.toString)
     val plasmaClient = fiber.fiberData.client
-    val paramValue = new Array[Object](2)
-    paramValue(0) = plasmaClient
-    paramValue(1) = objectId
+    val paramValue = new Array[Object](1)
+    paramValue(0) = objectId
     val timeOutInSeconds = conf.get(OapConf.OAP_EXTERNAL_CACHE_TIMEOUT_INSECONDS)
 
     try {
-      PlasmaTimeOutWrapper.run(new PlasmaSeal(), executorService, paramValue, timeOutInSeconds)
+      PlasmaTimeOutWrapper
+        .run(new PlasmaSeal(), plasmaClient, executorService, paramValue, timeOutInSeconds)
     }
     catch {
       case e @ (_: InterruptedException | _: ExecutionException |
