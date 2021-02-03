@@ -20,22 +20,22 @@ package org.apache.spark.sql.execution.datasources.oap.filecache;
 import org.apache.arrow.plasma.PlasmaClient;
 
 interface PlasmaMethodWrapper {
-    Object execute(PlasmaClient client, Object... param);
+    Object execute(PlasmaClient client, PlasmaParam plasmaParam);
 }
 
 class PlasmaCreate implements PlasmaMethodWrapper {
 
   @Override
-  public Object execute(PlasmaClient client, Object... param) {
-    return client.create((byte[])param[0], (int)param[1]);
+  public Object execute(PlasmaClient client, PlasmaParam plasmaParam) {
+    return client.create(plasmaParam.getObjectId(), plasmaParam.getLength());
   }
 }
 
 class PlasmaSeal implements PlasmaMethodWrapper {
 
   @Override
-  public Object execute(PlasmaClient client, Object... param) {
-    client.seal((byte[])param[0]);
+  public Object execute(PlasmaClient client, PlasmaParam plasmaParam) {
+    client.seal(plasmaParam.getObjectId());
     return new Object();
   }
 }
@@ -43,8 +43,8 @@ class PlasmaSeal implements PlasmaMethodWrapper {
 class PlasmaDelete implements PlasmaMethodWrapper {
 
   @Override
-  public Object execute(PlasmaClient client, Object... param) {
-    client.delete((byte[])param[0]);
+  public Object execute(PlasmaClient client, PlasmaParam plasmaParam) {
+    client.delete(plasmaParam.getObjectId());
     return new Object();
   }
 }
@@ -52,8 +52,8 @@ class PlasmaDelete implements PlasmaMethodWrapper {
 class PlasmaContains implements PlasmaMethodWrapper {
 
   @Override
-  public Object execute(PlasmaClient client, Object... param) {
-    return client.contains((byte[])param[0]);
+  public Object execute(PlasmaClient client, PlasmaParam plasmaParam) {
+    return client.contains(plasmaParam.getObjectId());
   }
 }
 
@@ -61,8 +61,9 @@ class PlasmaContains implements PlasmaMethodWrapper {
 class PlasmaGetObjAsByteBuffer implements PlasmaMethodWrapper {
 
   @Override
-  public Object execute(PlasmaClient client, Object... param) {
-    return client
-            .getObjAsByteBuffer((byte[])param[0], (int)param[1], (boolean)param[2]);
+  public Object execute(PlasmaClient client, PlasmaParam plasmaParam) {
+    return client.getObjAsByteBuffer(plasmaParam.getObjectId(),
+            plasmaParam.getTimeoutMs(),
+            plasmaParam.isMetadata());
   }
 }

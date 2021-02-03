@@ -30,10 +30,10 @@ import org.apache.arrow.plasma.exceptions.PlasmaGetException;
  */
 public class PlasmaTimeOutWrapper implements Callable<Object> {
   private ExecutorService executorService;
-  private Object[] paramValues;
   private long timeOutInSeconds;
   private PlasmaMethodWrapper wrapper;
   private PlasmaClient client;
+  private PlasmaParam plasmaParam;
 
   private PlasmaTimeOutWrapper() {
   }
@@ -42,25 +42,25 @@ public class PlasmaTimeOutWrapper implements Callable<Object> {
           PlasmaMethodWrapper wrapper,
           PlasmaClient client,
           ExecutorService executorService,
-          Object[] paramValues, long timeOutInSeconds)
+          PlasmaParam plasmaParam, long timeOutInSeconds)
           throws InterruptedException, ExecutionException, TimeoutException,
           DuplicateObjectException, PlasmaGetException, PlasmaClientException {
     PlasmaTimeOutWrapper plasmaTimeOutWrapper = new PlasmaTimeOutWrapper();
     return plasmaTimeOutWrapper
-            .submitFutureTask(wrapper, client, executorService, paramValues, timeOutInSeconds);
+            .submitFutureTask(wrapper, client, executorService, plasmaParam, timeOutInSeconds);
   }
 
   private Object submitFutureTask(
           PlasmaMethodWrapper wrapper,
           PlasmaClient client,
           ExecutorService executorService,
-          Object[] paramValues, long timeOutInSeconds)
+          PlasmaParam plasmaParam, long timeOutInSeconds)
           throws InterruptedException, ExecutionException, TimeoutException,
           DuplicateObjectException, PlasmaGetException, PlasmaClientException {
     this.client = client;
     this.wrapper = wrapper;
     this.executorService = executorService;
-    this.paramValues = paramValues;
+    this.plasmaParam = plasmaParam;
     this.timeOutInSeconds = timeOutInSeconds;
     FutureTask<Object> futureTask = (FutureTask<Object>) executorService.submit(this);
     executorService.execute(futureTask);
@@ -69,6 +69,6 @@ public class PlasmaTimeOutWrapper implements Callable<Object> {
 
   @Override
   public Object call() {
-    return wrapper.execute(client, paramValues);
+    return wrapper.execute(client, plasmaParam);
   }
 }
